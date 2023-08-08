@@ -6,3 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+glib = "0.18.1"
+gtk = "0.17.1"
+image = "0.24.6"
+rusty-tesseract = "1.1.7"
