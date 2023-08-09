@@ -1,12 +1,15 @@
+[workspace]
+members = ["libs/*"]
+
 [package]
 name = "live-ocr-translator"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+lib_gui = { path = "./libs/lib_gui" }
+lib_ocr = { path = "./libs/lib_ocr" }
+lib_translator = { path = "./libs/lib_translator" }
 glib = "0.18.1"
-gtk = "0.17.1"
 image = "0.24.6"
-rusty-tesseract = "1.1.7"
