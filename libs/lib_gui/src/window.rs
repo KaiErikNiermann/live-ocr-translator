@@ -1,11 +1,14 @@
+use std::env::Args;
+
 use gtk::prelude::*;
-use gtk::ApplicationWindow;
+use gtk::{ApplicationWindow, Button, Application, glib};
+use lib_ocr::*;
 
 pub struct WindowLayout {
-    width: i32,
-    height: i32,
-    title: String,
-    opacity: f32,
+    pub width: i32,
+    pub height: i32,
+    pub title: String,
+    pub opacity: f32,
 }
 
 pub fn window_corners(window: &ApplicationWindow) -> Vec<(i32, i32)> {
@@ -29,27 +32,28 @@ pub fn add_text(window: &ApplicationWindow, text: &str) {
     window.set_child(Some(&label));
 }
 
-pub fn make_windows(application: &gtk::Application) {
-    application.connect_activate(|app| {
-        // create the main window
-        window(app, &(WindowLayout {
-            width: 400,
-            height: 300,
-            title: String::from("translator"),
-            opacity: 0.5,
-        }))
-            .show_all();
+pub fn build_ui(application: &Application, mainwindow: &ApplicationWindow, textwindow: &ApplicationWindow) {
+    // Create a vertical box to hold the label and button
+    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
 
-        // create text window
-        let textwindow = window(app, &(WindowLayout {
-            width: 400,
-            height: 300,
-            title: String::from("textwindow"),
-            opacity: 1.0,
-        }));
+    let label = gtk::Label::new(Some("<translated text>"));
+    
+    let button = Button::with_label("Translate");
+    
+    vbox.pack_start(&button, false, false, 10);
+    
+    vbox.pack_start(&label, false, false, 10);
 
-        add_text(&textwindow, "template text");
+    button.connect_clicked(glib::clone!(@weak label => move |_| {
+        // set label text 
+        let text = lib_ocr::run_ocr("assets/english1.png", "eng");
+        label.set_text(&text);
+    }));
 
-        textwindow.show_all();
-    });
+    // Set the vbox as the child of mainwindow
+    textwindow.set_child(Some(&vbox));
+
+    mainwindow.show_all();
+    textwindow.show_all();
 }
+

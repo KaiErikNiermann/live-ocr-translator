@@ -5,4 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
+lib_ocr = { path = "../lib_ocr" }
 gtk = "0.17.1"
+glib = "0.18.1"
+
