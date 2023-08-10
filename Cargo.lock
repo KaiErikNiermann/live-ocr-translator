@@ -752,7 +752,10 @@ dependencies = [
 name = "lib_ocr"
 version = "0.1.0"
 dependencies = [
+ "image",
+ "lib_gui",
  "rusty-tesseract",
+ "winapi",
 ]
 
 [[package]]

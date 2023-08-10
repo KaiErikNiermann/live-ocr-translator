@@ -1,9 +1,17 @@
-pub fn gui() {
-    println!("gui lib");
+use gtk::prelude::*;
+use gtk::Application;
+
+pub mod window;
+
+pub fn init_app() -> gtk::Application {
+    return Application::builder()
+        .application_id("org.liveTranslator.gui")
+        .build();
 }
 
-pub fn gui_add(a: i32, b: i32) -> i32 {
-    a + b
+pub fn run_app(app: &gtk::Application) {
+    window::make_windows(app);
+    app.run();
 }
 
 #[cfg(test)]
@@ -12,11 +20,9 @@ mod tests {
 
     #[test]
     fn it_works() {
-        gui();
     }
 
     #[test]
     fn test_gui_add() {
-        assert_eq!(gui_add(1, 2), 3);
     }
 }

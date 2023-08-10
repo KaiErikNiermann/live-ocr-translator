@@ -1,9 +1,13 @@
-pub fn ocr() {
-    println!("ocr lib");
-}
+pub mod image;
 
-pub fn ocr_add(a: i32, b: i32) -> i32 {
-    a + b
+pub mod text;
+
+pub fn run_ocr(path: &str, lang: &str) -> String {
+    let img = image::get_image(path);
+    return text::clean_text(&image::text_from_image(&img, &(rusty_tesseract::Args {
+        lang: String::from(lang),
+        ..Default::default()
+    })));
 }
 
 #[cfg(test)]
@@ -12,11 +16,9 @@ mod tests {
 
     #[test]
     fn it_works() {
-        ocr();
     }
 
     #[test]
     fn test_ocr_add() {
-        assert_eq!(ocr_add(1, 2), 3);
     }
 }
