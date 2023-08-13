@@ -25,3 +25,7 @@ This project aims to add a 4th option where you can specify a region of text on 
 - [ ] Live translation for changing text
 - [ ] Easy to use GUI built with gtk
 - [ ] Accurate translation through image processing
+
+### Visual feature outline
+
+![image](assets/feature_outline.png)
