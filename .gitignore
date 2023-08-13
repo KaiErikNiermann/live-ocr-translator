@@ -1,2 +1,10 @@
 /target
 libs/**/target
+
+# compilation testing
+gtk_app
+gtk_library
+*.zip
+
+# other
+.git_old

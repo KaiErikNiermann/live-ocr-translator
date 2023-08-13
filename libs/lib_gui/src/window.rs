@@ -1,5 +1,7 @@
 use std::env::Args;
 
+use gtk::ffi::gtk_widget_set_visual;
+use gtk::gdk::ffi::gdk_visual_get_screen;
 use gtk::prelude::*;
 use gtk::{ApplicationWindow, Button, Application, glib};
 use lib_ocr::*;
@@ -35,23 +37,22 @@ pub fn add_text(window: &ApplicationWindow, text: &str) {
 pub fn build_ui(application: &Application, mainwindow: &ApplicationWindow, textwindow: &ApplicationWindow) {
     // Create a vertical box to hold the label and button
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    let tbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    tbox.set_opacity(0.5);
 
     let label = gtk::Label::new(Some("<translated text>"));
-    
     let button = Button::with_label("Translate");
     
     vbox.pack_start(&button, false, false, 10);
-    
     vbox.pack_start(&label, false, false, 10);
 
     button.connect_clicked(glib::clone!(@weak label => move |_| {
-        // set label text 
-        let text = lib_ocr::run_ocr("assets/english1.png", "eng");
+        let text = lib_ocr::run_ocr("./assets/english1.png", "eng");
         label.set_text(&text);
     }));
-
-    // Set the vbox as the child of mainwindow
+    mainwindow.set_app_paintable(true);
     textwindow.set_child(Some(&vbox));
+    mainwindow.set_child(Some(&tbox));
 
     mainwindow.show_all();
     textwindow.show_all();
