@@ -5,6 +5,3 @@ libs/**/target
 gtk_app
 gtk_library
 *.zip
-
-# other
-.git_old
