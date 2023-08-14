@@ -1,0 +1,26 @@
+name: win-cross-compile
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    name: Build and Cross Compile
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Build cross-compile container
+        run: docker build . -t gtkrs-crosscomp
+        
+      - name: Cross compile the application
+        run: |
+          chmod +x cross_compile.sh
+          ./cross_compile.sh

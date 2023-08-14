@@ -25,26 +25,6 @@ RUN rustup target add x86_64-pc-windows-gnu
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install gcc-mingw-w64-x86-64 -y
 
-# # build the gtk app for windows target
-# RUN PKG_CONFIG_ALLOW_CROSS=1 PKG_CONFIG_PATH="/app/gtklib/mingw64/lib/pkgconfig" RUSTFLAGS="-L /app/gtklib/mingw64/lib" cargo build --target=x86_64-pc-windows-gnu --bin live-ocr-translator --release
-
-# # copy the exe
-# RUN cp target/x86_64-pc-windows-gnu/release/live-ocr-translator.exe gtkapp
-
-# # copy gdbus.exe and required dlls
-# RUN cp gtklib/mingw64/bin/*.dll gtkapp
-# RUN cp gtklib/mingw64/bin/gdbus.exe gtkapp
-
-# # compile schemas 
-# RUN glib-compile-schemas gtklib/mingw64/share/glib-2.0/schemas
-
-# # copy remaining required files 
-# RUN cp gtklib/mingw64/share/glib-2.0/schemas/gschemas.compiled gtkapp/share/glib-2.0/schemas/gschemas.compiled \
-#     && cp -r gtklib/mingw64/share/icons/* gtkapp/share/icons \
-#     && cp -r gtklib/mingw64/lib/gdk-pixbuf-2.0 gtkapp/lib \
-#     && cp -r assets gtkapp
-
-# copy the packaged app back to host
 RUN chmod +x build.sh
 
 VOLUME [ "app" ]
