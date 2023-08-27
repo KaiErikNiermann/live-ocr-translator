@@ -2,6 +2,7 @@
 
 cp -r gtklib ../mnt
 cp -r gtkapp ../mnt
+cp -r tesseract-ocr ../mnt
 
 cd ../mnt
 
@@ -22,8 +23,7 @@ glib-compile-schemas gtklib/mingw64/share/glib-2.0/schemas
 cp gtklib/mingw64/share/glib-2.0/schemas/gschemas.compiled gtkapp/share/glib-2.0/schemas/gschemas.compiled \
     && cp -r gtklib/mingw64/share/icons/* gtkapp/share/icons \
     && cp -r gtklib/mingw64/lib/gdk-pixbuf-2.0 gtkapp/lib \
-    && cp -r assets gtkapp
+    && cp -r assets gtkapp \
+    && cp -a tesseract-ocr/. gtkapp
 
 rm -r gtklib
-
-# ./copy.sh
