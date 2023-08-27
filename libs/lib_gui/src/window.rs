@@ -1,10 +1,8 @@
-use std::env::Args;
-
-use gtk::ffi::gtk_widget_set_visual;
-use gtk::gdk::ffi::gdk_visual_get_screen;
 use gtk::prelude::*;
 use gtk::{ApplicationWindow, Button, Application, glib};
+use std::thread;
 use lib_ocr::*;
+use lib_ocr::win_sc::*;
 
 pub struct WindowLayout {
     pub width: i32,
@@ -38,19 +36,39 @@ pub fn build_ui(application: &Application, mainwindow: &ApplicationWindow, textw
     // Create a vertical box to hold the label and button
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let tbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    
     tbox.set_opacity(0.5);
+    mainwindow.set_app_paintable(true);
 
     let label = gtk::Label::new(Some("<translated text>"));
     let button = Button::with_label("Translate");
     
     vbox.pack_start(&button, false, false, 10);
     vbox.pack_start(&label, false, false, 10);
+    
+    // set padding around vbox
+    vbox.set_margin(25);
 
-    button.connect_clicked(glib::clone!(@weak label => move |_| {
+    button.connect_clicked(glib::clone!(@weak label, @weak tbox => move |_| {
         let text = lib_ocr::run_ocr("./assets/english1.png", "eng");
+        // Set translation window opacity to 0 
+        tbox.set_opacity(0.0);
+
+        // Take a screenshot of the window 
+        thread::spawn(|| {
+            monitor_sc(Some(&get_window_rect(window_handle("translator"))));
+        });
+
+        // Set the translation window opacity to 1 
+        tbox.set_opacity(0.5);
+
+        // Get the text from the screenshot 
+
         label.set_text(&text);
+        label.set_line_wrap(true);
+        label.set_size_request(500, -1);
     }));
-    mainwindow.set_app_paintable(true);
+
     textwindow.set_child(Some(&vbox));
     mainwindow.set_child(Some(&tbox));
 

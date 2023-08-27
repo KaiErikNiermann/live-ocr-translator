@@ -20,7 +20,7 @@ pub fn run_app(app: &gtk::Application) {
             })), 
             &window::window(app, &(window::WindowLayout {
                 width: 400,
-                height: 300,
+                height: 250,
                 title: String::from("textwindow"),
                 opacity: 1.0,
             })));

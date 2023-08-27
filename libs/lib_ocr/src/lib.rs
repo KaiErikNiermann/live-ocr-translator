@@ -1,6 +1,6 @@
 pub mod image;
-
 pub mod text;
+pub mod win_sc;
 
 pub fn run_ocr(path: &str, lang: &str) -> String {
     let img = image::get_image(path);
