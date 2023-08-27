@@ -34,7 +34,7 @@ Currently I am developing primarily for windows so to test the application on wi
 To build image with the required dependencies
 
 ```bash
-docker build . -t gtkrs-cross
+docker build . -t gtkrs-crosscomp
 ```
 
 To cross-compile the application for windows

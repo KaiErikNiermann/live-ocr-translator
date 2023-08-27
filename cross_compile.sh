@@ -3,4 +3,4 @@
 docker run --rm --name cross -v "$(pwd):/mnt/" gtkrs-crosscomp
 
 zip -r gtkapp gtkapp
-rm -r gtkapp
+sudo rm -r gtkapp
