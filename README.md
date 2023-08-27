@@ -22,12 +22,21 @@ This project aims to add a 4th option where you can specify a region of text on 
 ## Features
 
 - [ ] Basic image translation for common languages
-- [ ] Live translation for changing text
-- [ ] Easy to use GUI built with gtk
-- [ ] Accurate translation through image processing
-- [ ] Sound to text system
+  - [ ] Windows
+  - [ ] Linux
+- [ ] Live text translation
+  - [ ] Windows
+  - [ ] Linux
+- [ ] GUI refinements
+- [ ] Accurate translation through image preprocessing
+- [ ] Live audio translation
+  - [ ] Windows
+  - [ ] Linux
+- [ ] Final GUI improvements
 
 ## Contributing
+
+### Windows
 
 Currently I am developing primarily for windows so to test the application on windows first build the dockerfile then each time you want to compile the application for windows run the `cross_compile.sh` script.
 
@@ -37,13 +46,17 @@ To build image with the required dependencies
 docker build . -t gtkrs-crosscomp
 ```
 
-To cross-compile the application for windows
+Once you have the cross compilation image built you can just runn the cross compile script whenever you want to build the application for windows. The zip should then appear in the root directory of the project.
 
 ```bash
 ./cross_compile.sh
 ```
 
 The packaged application should then appear in your root directory in the folder gtkapp
+
+### Help
+
+This is a somewhat larger undertaking than what I usually do, so I would greatly appreciate any contributions to any aspect of the app.
 
 ### Visual feature outline
 

@@ -10,17 +10,6 @@ pub struct WindowLayout {
     pub opacity: f32,
 }
 
-pub fn window_corners(window: &ApplicationWindow) -> Vec<(i32, i32)> {
-    let (x, y) = window.position();
-    let (width, height) = window.size();
-    return vec![
-        (x, y),
-        (x + width, y),
-        (x, y + height),
-        (x + width, y + height),
-    ];
-}
-
 pub fn window(app: &gtk::Application, layout: &WindowLayout) -> ApplicationWindow {
     return ApplicationWindow::builder()
         .application(app)
