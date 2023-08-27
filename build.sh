@@ -27,3 +27,4 @@ cp gtklib/mingw64/share/glib-2.0/schemas/gschemas.compiled gtkapp/share/glib-2.0
     && cp -a tesseract-ocr/. gtkapp
 
 rm -r gtklib
+rm -r tesseract-ocr
