@@ -3,10 +3,8 @@
 ![Static Badge](https://img.shields.io/badge/OCR-tesseract-blue)
 ![Static Badge](https://img.shields.io/badge/GUI-gtk-blue)
 
-## Why
-
 > **DISCLAIMER** This project is still in very early development and **does not work** you can refer to the Features section in here to see the things currently implemented / will be implemented. I am committed to getting this in a functional state soon enough hopefully, but right now you can unfortunately not use this. Do feel free to contribute by opening a PR though. As I am a student things migth still take a while so I am accepting all the help I can get.
-
+## Why
 
 This is basically just a desktop implementation of googles version of live translation. To my knowledge the three main options for translating on screen content are
 
