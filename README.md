@@ -5,6 +5,9 @@
 
 ## Why
 
+> **DISCLAIMER** This project is still in very early development and **does not work** you can refer to the Features section in here to see the things currently implemented / will be implemented. I am committed to getting this in a functional state soon enough hopefully, but right now you can unfortunately not use this. Do feel free to contribute by opening a PR though. As I am a student things migth still take a while so I am accepting all the help I can get.
+
+
 This is basically just a desktop implementation of googles version of live translation. To my knowledge the three main options for translating on screen content are
 
 - Screenshot
@@ -13,7 +16,7 @@ This is basically just a desktop implementation of googles version of live trans
 
 This project aims to add a 4th option where you can specify a region of text on the screen to translate and then either translate just any text recognized in this specified segment or translate the text in real time as it changes.
 
-### Applications
+### Future Applications
 
 - Live translation of subtitles when preferred option does not exist
 - Live translation of text content in games without a translation
