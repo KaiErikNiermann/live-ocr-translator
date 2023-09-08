@@ -1,4 +1,4 @@
-use reqwest::{Client};
+use reqwest::{Client, Request, Response};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -12,7 +12,7 @@ struct APIResponse {
     translations: Vec<translations>
 }
 
-pub async fn translate_text(text: &str, auth_key: &str) {
+pub async fn translate_text(text: &str, auth_key: &str) -> Result<String, String> {
     let client = Client::new();
     let url = "https://api-free.deepl.com/v2/translate";
 
@@ -20,7 +20,7 @@ pub async fn translate_text(text: &str, auth_key: &str) {
     let json_data = format!(
         r#"{{
             "text": ["{}"],
-            "target_lang": "DE"
+            "target_lang": "EN"
         }}"#,
         text
     );
@@ -35,22 +35,23 @@ pub async fn translate_text(text: &str, auth_key: &str) {
         .await
         .unwrap();
 
-    // Check if the request was successful (status code 200).
+
     match response.status() {
         reqwest::StatusCode::OK => {
-            
             let string_res = response.text().await.unwrap();
-
             let api_res: APIResponse = serde_json::from_str(&string_res).unwrap();
 
             println!("{:?}", api_res.translations[0].text);
-            println!("Ok!")
+            println!("Ok!");
+            Ok(String::from(api_res.translations[0].text.clone()))
         },
         reqwest::StatusCode::BAD_REQUEST => {
-            println!("Bad request")
+            println!("Bad request");
+            Err(String::from("Error"))
         },
         _ => {
-            panic!("Something unexpected")
+            panic!("Something unexpected");
         }
     }
+
 }

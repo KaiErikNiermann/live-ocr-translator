@@ -14,4 +14,4 @@ lib_translator = { path = "./libs/lib_translator" }
 glib = "0.18.1"
 image = "0.24.6"
 futures = "0.3" 
-tokio = { version = "1.12.0", features = ["full"] } 
+tokio = { version = "1.32.0", features = ["full"] } 

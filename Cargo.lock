@@ -999,6 +999,8 @@ dependencies = [
  "glib 0.18.1",
  "gtk",
  "lib_ocr",
+ "lib_translator",
+ "tokio",
 ]
 
 [[package]]

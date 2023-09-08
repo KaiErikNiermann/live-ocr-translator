@@ -47,7 +47,7 @@ To build image with the required dependencies
 docker build . -t gtkrs-crosscomp
 ```
 
-Once you have the cross compilation image built you can just runn the cross compile script whenever you want to build the application for windows. The zip should then appear in the root directory of the project.
+Once you have the cross compilation image built you can just run the cross compile script whenever you want to build the application for windows. The zip should then appear in the root directory of the project.
 
 ```bash
 ./cross_compile.sh

@@ -1,7 +1,11 @@
+use ::glib::{Receiver, Sender};
 use gtk::prelude::*;
-use gtk::{glib, Application, ApplicationWindow, Button};
+use gtk::{glib, Application, ApplicationWindow, Button, MenuBar, MenuItem};
 use lib_ocr::win_sc::*;
+use lib_translator;
 use std::thread;
+use tokio::runtime;
+use tokio::runtime::Runtime;
 
 pub struct WindowLayout {
     pub width: i32,
@@ -25,12 +29,44 @@ pub fn add_text(window: &ApplicationWindow, text: &str) {
     window.set_child(Some(&label));
 }
 
+fn get_runtime() -> Runtime {
+    return runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .unwrap();
+}
+
+#[cfg(target_os = "linux")]
+fn take_sc() {
+    println!("No support on linux yet");
+}
+
+#[cfg(target_os = "windows")]
+fn take_sc() {
+    let image_handler = thread::spawn(|| {
+        monitor::monitor_sc(Some(&window::get_window_rect(window::window_handle(
+            "translator",
+        ))));
+    });
+
+    match image_handler.join() {
+        Ok(res) => println!("{:?}", res),
+        Err(_) => println!("Error"),
+    }
+}
+
+#[derive(Clone)]
+enum UpdateMessage {
+    UpdateLabel(String),
+}
+
 pub fn build_ui(
     application: &Application,
     mainwindow: &ApplicationWindow,
     textwindow: &ApplicationWindow,
 ) {
-    // Create a vertical box to hold the label and button
+    let mut lang: String = String::from("EN");
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let tbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
 
@@ -39,35 +75,75 @@ pub fn build_ui(
 
     let label = gtk::Label::new(Some("<translated text>"));
     let button = Button::with_label("Translate");
+    let menu = MenuBar::new();
 
+    let de_lang = MenuItem::with_label("DE");
+    de_lang.connect_activate(move |_| {
+        println!("selected DE lang");
+    });
+    
+    let en_lang = MenuItem::with_label("EN");
+    en_lang.connect_activate(move |_| {
+        println!("selected EN lang");
+    });
+
+    let jp_lang = MenuItem::with_label("JP");
+    jp_lang.connect_activate(move |_| {
+        println!("selected JP lang");
+    });
+    
+    menu.append(&de_lang);
+    menu.append(&en_lang);
+    menu.append(&jp_lang);
+
+    vbox.pack_start(&menu, false, false, 10);
     vbox.pack_start(&button, false, false, 10);
     vbox.pack_start(&label, false, false, 10);
 
     // set padding around vbox
     vbox.set_margin(25);
-
+    
+    let rt = get_runtime();
+    
     button.connect_clicked(glib::clone!(@weak label, @weak tbox => move |_| {
         // Set translation window opacity to 0
         tbox.set_opacity(0.0);
+        
+        take_sc();
+        println!("{}", lang);
+        
+        let (sender, receiver): (
+            gtk::glib::Sender<UpdateMessage>,
+            gtk::glib::Receiver<UpdateMessage>,
+        ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+        
+        let tokio_handle = rt.handle();
+        
+        /*
+         * Because reqwuest is async this is the only somewhat sane approach I found for 
+         * being able to get the translated text and then update the label. Credit to slomo and their 
+         * blog here : https://coaxion.net/blog/2019/02/mpsc-channel-api-for-painless-usage-of-threads-with-gtk-in-rust/
+         */
+        tokio_handle.spawn(async move {
+            let text = lib_ocr::run_ocr("./screenshot.png", "eng");
 
-        // Take a screenshot of the window
-        let image_handler = thread::spawn(|| {
-            monitor::monitor_sc(
-                Some(&window::get_window_rect(
-                    window::window_handle("translator"))
-                )
-            );
+            let translated_text = match lib_translator::translate_text(&text, "f191652f-38ee-caed-ab30-f20a9a0cc21e:fx").await {
+                Ok(text) => text,
+                Err(error_text) => panic!("{:?}", error_text)
+            };
+
+            let _ = sender.send(UpdateMessage::UpdateLabel(translated_text));
         });
 
-        image_handler.join();
+        let label_clone = label.clone();
+        receiver.attach(None, move |msg| {
+            match msg {
+                UpdateMessage::UpdateLabel(text) => label_clone.set_text(text.as_str()),
+            }
 
-        println!("image captured");
+            glib::Continue(true)
+        });
 
-        // Get the text from the screenshot
-        let text = lib_ocr::run_ocr("./screenshot.png", "eng");
-        println!("{}", text);
-
-        label.set_text(&text);
         label.set_line_wrap(true);
         label.set_size_request(500, -1);
     }));

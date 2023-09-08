@@ -15,18 +15,13 @@ pub fn get_image(path: &str) -> Image {
         println!("Unable to retrieve current directory.");
     }
 
-    let paths = fs::read_dir("./").unwrap();
-
-    for path in paths {
-        println!("Name: {}", path.unwrap().path().display())
-    }
-
     // concat cwd with path
     let path = format!("{}/{}", env::current_dir().unwrap().to_str().unwrap(), path);
-    let img = ImageReader::open(path)
-        .unwrap()
-        .decode()
-        .unwrap();
+
+    let img = match ImageReader::open(path) {
+        Ok(res) => res.decode().unwrap(),
+        Err(err) => panic!("{:?}", err) 
+    };
 
     return Image::from_dynamic_image(&img).unwrap();
 }
