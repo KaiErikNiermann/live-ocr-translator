@@ -1,15 +1,15 @@
 use reqwest::{Client, Request, Response};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct translations {
-    detected_source_language: String, 
-    text: String
+    detected_source_language: String,
+    text: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct APIResponse {
-    translations: Vec<translations>
+    translations: Vec<translations>,
 }
 
 pub async fn translate_text(text: &str, auth_key: &str) -> Result<String, String> {
@@ -35,7 +35,6 @@ pub async fn translate_text(text: &str, auth_key: &str) -> Result<String, String
         .await
         .unwrap();
 
-
     match response.status() {
         reqwest::StatusCode::OK => {
             let string_res = response.text().await.unwrap();
@@ -44,14 +43,13 @@ pub async fn translate_text(text: &str, auth_key: &str) -> Result<String, String
             println!("{:?}", api_res.translations[0].text);
             println!("Ok!");
             Ok(String::from(api_res.translations[0].text.clone()))
-        },
+        }
         reqwest::StatusCode::BAD_REQUEST => {
             println!("Bad request");
             Err(String::from("Error"))
-        },
+        }
         _ => {
             panic!("Something unexpected");
         }
     }
-
 }

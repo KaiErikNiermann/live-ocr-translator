@@ -1,25 +1,16 @@
-use windows::core::{ComInterface, Result, Interface};
+use windows::core::{ComInterface, Interface, Result};
+use windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
 use windows::Win32::Graphics::Direct3D::{
-    D3D_DRIVER_TYPE,
-    D3D_DRIVER_TYPE_HARDWARE,
-    D3D_DRIVER_TYPE_WARP,
+    D3D_DRIVER_TYPE, D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP,
 };
 use windows::Win32::Graphics::Direct3D11::{
-    D3D11CreateDevice,
-    ID3D11Device,
-    D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-    D3D11_CREATE_DEVICE_FLAG,
+    D3D11CreateDevice, ID3D11Device, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_FLAG,
     D3D11_SDK_VERSION,
 };
-use windows::Win32::Graphics::Dxgi::{
-    IDXGIDevice,
-    DXGI_ERROR_UNSUPPORTED,
-};
+use windows::Win32::Graphics::Dxgi::{IDXGIDevice, DXGI_ERROR_UNSUPPORTED};
 use windows::Win32::System::WinRT::Direct3D11::{
-    CreateDirect3D11DeviceFromDXGIDevice,
-    IDirect3DDxgiInterfaceAccess,
+    CreateDirect3D11DeviceFromDXGIDevice, IDirect3DDxgiInterfaceAccess,
 };
-use windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
 
 fn create_d3d_device_with_type(
     driver_type: D3D_DRIVER_TYPE,
@@ -66,7 +57,7 @@ pub fn create_d3d_device() -> Result<ID3D11Device> {
 
     if let Err(error) = &result {
         /*
-        Fallback to WARP if initialization failed with hardware driver, 
+        Fallback to WARP if initialization failed with hardware driver,
         allows for rendering when d3d hard is not available.
          */
         if error.code() == DXGI_ERROR_UNSUPPORTED {

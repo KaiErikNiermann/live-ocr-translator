@@ -1,22 +1,9 @@
-use std::{
-    ffi::c_void,
-    mem::size_of,
-    ptr::null_mut,
-};
-use crate::win_sc::{
-    init, 
-    WindowRect,
-    take_sc,
-    create_capture_item,
-    Handle
-}; 
-use windows::Win32::Foundation::{
-    HWND,
-    RECT,
-};
+use crate::win_sc::{create_capture_item, init, take_sc, Handle, WindowRect};
+use std::{ffi::c_void, mem::size_of, ptr::null_mut};
+use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::Graphics::Dwm::DwmGetWindowAttribute;
-use windows_sys::Win32::UI::*;
 use windows::Win32::Graphics::Dwm::DWMWA_EXTENDED_FRAME_BOUNDS;
+use windows_sys::Win32::UI::*;
 
 pub fn window_handle(window_title: &str) -> HWND {
     init();
@@ -30,7 +17,7 @@ pub fn window_handle(window_title: &str) -> HWND {
             handle => handle,
         }
     };
-} 
+}
 
 pub fn get_window_rect(window_handle: HWND) -> RECT {
     let mut rect = RECT {

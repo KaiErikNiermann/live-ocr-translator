@@ -1,25 +1,17 @@
-use windows::Win32::Graphics::Gdi::{
-    MonitorFromWindow,
-    MONITOR_DEFAULTTOPRIMARY,
-};
+use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTOPRIMARY};
 
 use windows::Win32::Foundation::RECT;
 
 use windows::Win32::UI::WindowsAndMessaging::GetDesktopWindow;
 
-use crate::win_sc::{
-    init, 
-    Handle,
-    create_capture_item, 
-    take_sc
-};
+use crate::win_sc::{create_capture_item, init, take_sc, Handle};
 
 pub fn monitor_sc(rect: Option<&RECT>) {
     init();
-    
+
     let main_monitor_handle =
-    unsafe { MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY) };
-    
+        unsafe { MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY) };
+
     let monitor_capture_item = create_capture_item(Handle::HMONITOR(main_monitor_handle)).unwrap();
 
     let (width, height) = match monitor_capture_item.Size() {
@@ -39,11 +31,11 @@ pub fn monitor_sc(rect: Option<&RECT>) {
             bottom: window_rect.bottom,
         },
         None => RECT {
-            left: 0, 
-            top: 0, 
+            left: 0,
+            top: 0,
             right: width,
             bottom: height,
-        }
+        },
     };
 
     match take_sc(&monitor_capture_item, &capture_rect) {

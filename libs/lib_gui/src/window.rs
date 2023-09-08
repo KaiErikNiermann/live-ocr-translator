@@ -1,6 +1,6 @@
 use ::glib::{Receiver, Sender};
 use gtk::prelude::*;
-use gtk::{glib, Application, ApplicationWindow, Button, MenuBar, MenuItem};
+use gtk::{glib, Application, ApplicationWindow, Button, Menu, MenuBar, MenuItem};
 use lib_ocr::win_sc::*;
 use lib_translator;
 use std::thread;
@@ -61,12 +61,28 @@ enum UpdateMessage {
     UpdateLabel(String),
 }
 
+fn get_lang_dropdown(
+    onclick: impl Fn(&MenuItem) + Clone + 'static
+) -> Menu {
+    let language_choices: Vec<MenuItem> = vec![
+        MenuItem::with_label("jp"),
+        MenuItem::with_label("eng"),
+        MenuItem::with_label("de"),
+    ];
+
+    let lang_menu = Menu::new();
+    for lang in language_choices {
+        lang_menu.append(&lang);
+        lang.connect_activate(onclick.clone());
+    }
+    lang_menu
+}
+
 pub fn build_ui(
     application: &Application,
     mainwindow: &ApplicationWindow,
     textwindow: &ApplicationWindow,
 ) {
-    let mut lang: String = String::from("EN");
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let tbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
 
@@ -77,24 +93,19 @@ pub fn build_ui(
     let button = Button::with_label("Translate");
     let menu = MenuBar::new();
 
-    let de_lang = MenuItem::with_label("DE");
-    de_lang.connect_activate(move |_| {
-        println!("selected DE lang");
-    });
-    
-    let en_lang = MenuItem::with_label("EN");
-    en_lang.connect_activate(move |_| {
-        println!("selected EN lang");
-    });
+    let source = MenuItem::with_label("Source");
+    let target = MenuItem::with_label("Target");
 
-    let jp_lang = MenuItem::with_label("JP");
-    jp_lang.connect_activate(move |_| {
-        println!("selected JP lang");
-    });
-    
-    menu.append(&de_lang);
-    menu.append(&en_lang);
-    menu.append(&jp_lang);
+    source.set_submenu(Some(&get_lang_dropdown(
+        move |_: &MenuItem| println!("clicked in source"),
+    )));
+
+    target.set_submenu(Some(&get_lang_dropdown(
+        move |_: &MenuItem| println!("clicked in target"),
+    )));
+
+    menu.append(&source);
+    menu.append(&target);
 
     vbox.pack_start(&menu, false, false, 10);
     vbox.pack_start(&button, false, false, 10);
@@ -102,15 +113,14 @@ pub fn build_ui(
 
     // set padding around vbox
     vbox.set_margin(25);
-    
+
     let rt = get_runtime();
-    
+
     button.connect_clicked(glib::clone!(@weak label, @weak tbox => move |_| {
         // Set translation window opacity to 0
         tbox.set_opacity(0.0);
         
         take_sc();
-        println!("{}", lang);
         
         let (sender, receiver): (
             gtk::glib::Sender<UpdateMessage>,
