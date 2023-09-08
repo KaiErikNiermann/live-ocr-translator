@@ -15,9 +15,9 @@ struct TranslationResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Language {
-    language: String,
-    name: String,
-    supports_formality: bool
+    pub language: String,
+    pub name: String,
+    pub supports_formality: bool
 }
 
 pub async fn translate_text(text: &str) -> Result<String, reqwest::Error> {

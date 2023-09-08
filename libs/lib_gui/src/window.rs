@@ -8,6 +8,7 @@ use std::env;
 use std::thread;
 use tokio::runtime;
 use tokio::runtime::Runtime;
+use lib_translator::Language;
 
 pub struct WindowLayout {
     pub width: i32,
@@ -65,6 +66,23 @@ enum UpdateText {
 
 enum UpdateLang {
     UpdateLang(String),
+}
+
+async fn get_lang_choices() -> HashMap<String, MenuItem> {
+    let rt = get_runtime();
+
+    let res: Vec<lib_translator::Language> = 
+        match lib_translator::get_supported().await {
+            Ok(res) => res,
+            Err(_) => panic!("Error getting supported languages")
+    };
+
+    res
+        .iter()
+        .map(|lang: &Language| {
+            (String::from(&lang.language[0..1]), MenuItem::with_label(&lang.language[0..1]))
+        })
+        .collect::<HashMap<String, MenuItem>>()
 }
 
 fn get_lang_dropdown(lang_choice: &Label) -> Menu {
