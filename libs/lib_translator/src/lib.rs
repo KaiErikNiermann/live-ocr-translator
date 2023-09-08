@@ -60,6 +60,18 @@ pub async fn translate_text(text: &str) -> Result<String, reqwest::Error> {
     }
 }
 
+/**
+## get_supported
+Returns the list of supported languages, currently uses the free tier url, therefore needs free tier api key.
+### example usage
+```rust
+let res: Vec<lib_translator::Language> 
+    = match lib_translator::get_supported().await {
+    Ok(res) => res,
+    Err(_) => panic!("Whoop")
+}; 
+```
+*/
 pub async fn get_supported() -> Result<Vec<Language>, reqwest::Error> {
     let auth_key = env::var("DEEPL_API_KEY").expect("DEEPL_API_KEY key is not set, set it in a .env file in the root dir of the project");
     let client = Client::new();

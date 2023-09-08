@@ -1,5 +1,5 @@
 use ::glib::{Receiver, Sender};
-use gtk::prelude::*;
+use gtk::{prelude::*, Label};
 use gtk::{glib, Application, ApplicationWindow, Button, Menu, MenuBar, MenuItem};
 use lib_ocr::win_sc::*;
 use lib_translator;
@@ -63,7 +63,11 @@ enum UpdateText {
     UpdateLabel(String),
 }
 
-fn get_lang_dropdown() -> Menu {
+enum UpdateLang {
+    UpdateLang(String),
+}
+
+fn get_lang_dropdown(lang_choice: &Label) -> Menu {
     let lang_choices: HashMap<String, MenuItem> = HashMap::from([
         (String::from("jp"), MenuItem::with_label("jp")),
         (String::from("eng"), MenuItem::with_label("eng")),
@@ -71,10 +75,11 @@ fn get_lang_dropdown() -> Menu {
     ]);
 
     let lang_menu = Menu::new();
-    for (lang_str, lang_choice_item) in lang_choices {
+    for (lang_code_str, lang_choice_item) in lang_choices {
         lang_menu.append(&lang_choice_item);
-        lang_choice_item.connect_activate(glib::clone!(@strong lang_str => move |_| {
-            println!("You chose {}", lang_str);
+        lang_choice_item.connect_activate(glib::clone!(@strong lang_code_str, @weak lang_choice => move |_| {
+            lang_choice.set_text(&lang_code_str);
+            println!("You chose {}", lang_code_str);
         }));
     }
     lang_menu
@@ -93,24 +98,28 @@ pub fn build_ui(
 
     let label = gtk::Label::new(Some("<translated text>"));
     let button = Button::with_label("Translate");
-    let menu = MenuBar::new();
+    let lang_choice = gtk::Label::new(Some("eng")); 
 
+    let menu = MenuBar::new();
     let source = MenuItem::with_label("Source");
     let target = MenuItem::with_label("Target");
 
-    source.set_submenu(Some(&get_lang_dropdown()));
-    target.set_submenu(Some(&get_lang_dropdown()));
+    source.set_submenu(Some(&get_lang_dropdown(&lang_choice)));
+    target.set_submenu(Some(&get_lang_dropdown(&lang_choice)));
 
     menu.append(&source);
     menu.append(&target);
 
+    let button_lang_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    button_lang_box.pack_start(&button, true, true, 10);
+    button_lang_box.pack_start(&lang_choice, false, true, 10); 
+
     vbox.pack_start(&menu, false, false, 10);
-    vbox.pack_start(&button, false, false, 10);
+    vbox.pack_start(&button_lang_box, false, false, 10); 
     vbox.pack_start(&label, false, false, 10);
 
     vbox.set_margin(25);
 
-    
     let rt = get_runtime();
 
     #[cfg(target_os = "linux")]
@@ -126,18 +135,6 @@ pub fn build_ui(
         take_sc();
         
         let tokio_handle = rt.handle();
-
-        tokio_handle.spawn(async move {
-            let res: Vec<lib_translator::Language> = match lib_translator::get_supported().await {
-                Ok(res) => {
-                    println!("{:?}", res);
-                    res
-                },
-                Err(_) => panic!("Whoop")
-            };
-    
-            println!("{:?}", res);
-        });
         
         let (sender, receiver): (
             gtk::glib::Sender<UpdateText>,
@@ -149,7 +146,8 @@ pub fn build_ui(
          * being able to get the translated text and then update the label. Credit to slomo and their 
          * blog here : https://coaxion.net/blog/2019/02/mpsc-channel-api-for-painless-usage-of-threads-with-gtk-in-rust/
          */
-        let text = lib_ocr::run_ocr(fp, "eng");
+        let src_lang = lang_choice.text();
+        let text = lib_ocr::run_ocr(fp, &src_lang);
 
         tokio_handle.spawn(async move {
             let translated_text = match lib_translator::translate_text(&text).await {
