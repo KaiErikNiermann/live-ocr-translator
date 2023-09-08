@@ -5,3 +5,4 @@ libs/**/target
 gtkapp
 gtklib
 *.zip
+tesseract-ocr
