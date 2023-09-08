@@ -47,12 +47,11 @@ pub fn build_ui(
     vbox.set_margin(25);
 
     button.connect_clicked(glib::clone!(@weak label, @weak tbox => move |_| {
-        let text = lib_ocr::run_ocr("./assets/english1.png", "eng");
         // Set translation window opacity to 0
         tbox.set_opacity(0.0);
 
         // Take a screenshot of the window
-        thread::spawn(|| {
+        let image_handler = thread::spawn(|| {
             monitor::monitor_sc(
                 Some(&window::get_window_rect(
                     window::window_handle("translator"))
@@ -60,10 +59,13 @@ pub fn build_ui(
             );
         });
 
-        // Set the translation window opacity to 1
-        tbox.set_opacity(0.5);
+        image_handler.join();
+
+        println!("image captured");
 
         // Get the text from the screenshot
+        let text = lib_ocr::run_ocr("./screenshot.png", "eng");
+        println!("{}", text);
 
         label.set_text(&text);
         label.set_line_wrap(true);

@@ -27,16 +27,3 @@ pub fn run_app(app: &gtk::Application) {
     });
     app.run();
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-    }
-
-    #[test]
-    fn test_gui_add() {
-    }
-}
