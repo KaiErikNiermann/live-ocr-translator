@@ -3,6 +3,8 @@ use gtk::prelude::*;
 use gtk::{glib, Application, ApplicationWindow, Button, Menu, MenuBar, MenuItem};
 use lib_ocr::win_sc::*;
 use lib_translator;
+use std::collections::HashMap;
+use std::env;
 use std::thread;
 use tokio::runtime;
 use tokio::runtime::Runtime;
@@ -39,7 +41,7 @@ fn get_runtime() -> Runtime {
 
 #[cfg(target_os = "linux")]
 fn take_sc() {
-    println!("No support on linux yet");
+    println!("No support on linux yet, coming soon hopefully");
 }
 
 #[cfg(target_os = "windows")]
@@ -57,23 +59,23 @@ fn take_sc() {
 }
 
 #[derive(Clone)]
-enum UpdateMessage {
+enum UpdateText {
     UpdateLabel(String),
 }
 
-fn get_lang_dropdown(
-    onclick: impl Fn(&MenuItem) + Clone + 'static
-) -> Menu {
-    let language_choices: Vec<MenuItem> = vec![
-        MenuItem::with_label("jp"),
-        MenuItem::with_label("eng"),
-        MenuItem::with_label("de"),
-    ];
+fn get_lang_dropdown() -> Menu {
+    let lang_choices: HashMap<String, MenuItem> = HashMap::from([
+        (String::from("jp"), MenuItem::with_label("jp")),
+        (String::from("eng"), MenuItem::with_label("eng")),
+        (String::from("de"), MenuItem::with_label("de")),
+    ]);
 
     let lang_menu = Menu::new();
-    for lang in language_choices {
-        lang_menu.append(&lang);
-        lang.connect_activate(onclick.clone());
+    for (lang_str, lang_choice_item) in lang_choices {
+        lang_menu.append(&lang_choice_item);
+        lang_choice_item.connect_activate(glib::clone!(@strong lang_str => move |_| {
+            println!("You chose {}", lang_str);
+        }));
     }
     lang_menu
 }
@@ -96,13 +98,8 @@ pub fn build_ui(
     let source = MenuItem::with_label("Source");
     let target = MenuItem::with_label("Target");
 
-    source.set_submenu(Some(&get_lang_dropdown(
-        move |_: &MenuItem| println!("clicked in source"),
-    )));
-
-    target.set_submenu(Some(&get_lang_dropdown(
-        move |_: &MenuItem| println!("clicked in target"),
-    )));
+    source.set_submenu(Some(&get_lang_dropdown()));
+    target.set_submenu(Some(&get_lang_dropdown()));
 
     menu.append(&source);
     menu.append(&target);
@@ -111,10 +108,16 @@ pub fn build_ui(
     vbox.pack_start(&button, false, false, 10);
     vbox.pack_start(&label, false, false, 10);
 
-    // set padding around vbox
     vbox.set_margin(25);
 
+    
     let rt = get_runtime();
+
+    #[cfg(target_os = "linux")]
+    let fp = "./placeholder.png";
+
+    #[cfg(target_os = "windows")]
+    let fp = "./screenshot.png";
 
     button.connect_clicked(glib::clone!(@weak label, @weak tbox => move |_| {
         // Set translation window opacity to 0
@@ -122,33 +125,45 @@ pub fn build_ui(
         
         take_sc();
         
-        let (sender, receiver): (
-            gtk::glib::Sender<UpdateMessage>,
-            gtk::glib::Receiver<UpdateMessage>,
-        ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
-        
         let tokio_handle = rt.handle();
+
+        tokio_handle.spawn(async move {
+            let res: Vec<lib_translator::Language> = match lib_translator::get_supported().await {
+                Ok(res) => {
+                    println!("{:?}", res);
+                    res
+                },
+                Err(_) => panic!("Whoop")
+            };
+    
+            println!("{:?}", res);
+        });
+        
+        let (sender, receiver): (
+            gtk::glib::Sender<UpdateText>,
+            gtk::glib::Receiver<UpdateText>,
+        ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         
         /*
          * Because reqwuest is async this is the only somewhat sane approach I found for 
          * being able to get the translated text and then update the label. Credit to slomo and their 
          * blog here : https://coaxion.net/blog/2019/02/mpsc-channel-api-for-painless-usage-of-threads-with-gtk-in-rust/
          */
+        let text = lib_ocr::run_ocr(fp, "eng");
+
         tokio_handle.spawn(async move {
-            let text = lib_ocr::run_ocr("./screenshot.png", "eng");
-
-            let translated_text = match lib_translator::translate_text(&text, "f191652f-38ee-caed-ab30-f20a9a0cc21e:fx").await {
+            let translated_text = match lib_translator::translate_text(&text).await {
                 Ok(text) => text,
-                Err(error_text) => panic!("{:?}", error_text)
+                Err(_) => String::from("Could not translate")
             };
-
-            let _ = sender.send(UpdateMessage::UpdateLabel(translated_text));
+            
+            let _ = sender.send(UpdateText::UpdateLabel(translated_text));
         });
 
         let label_clone = label.clone();
         receiver.attach(None, move |msg| {
             match msg {
-                UpdateMessage::UpdateLabel(text) => label_clone.set_text(text.as_str()),
+                UpdateText::UpdateLabel(text) => label_clone.set_text(text.as_str()),
             }
 
             glib::Continue(true)

@@ -1,7 +1,6 @@
 use image::io::Reader as ImageReader;
 use rusty_tesseract::{Args, Image};
 use std::env;
-use std::fs;
 
 pub fn get_image(path: &str) -> Image {
     // print cwd
@@ -27,5 +26,8 @@ pub fn get_image(path: &str) -> Image {
 }
 
 pub fn text_from_image(img: &Image, args: &Args) -> String {
-    rusty_tesseract::image_to_string(img, args).unwrap()
+    return match rusty_tesseract::image_to_string(img, args) {
+        Ok(res) => res,
+        Err(_) => String::from("OCR failed"),
+    };
 }

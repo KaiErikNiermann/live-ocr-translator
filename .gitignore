@@ -1,5 +1,6 @@
 /target
 libs/**/target
+.env
 
 # compilation testing
 gtkapp
