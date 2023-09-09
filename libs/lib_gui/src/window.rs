@@ -34,14 +34,6 @@ pub fn add_text(window: &ApplicationWindow, text: &str) {
     window.set_child(Some(&label));
 }
 
-fn get_runtime() -> Runtime {
-    return runtime::Builder::new_multi_thread()
-        .worker_threads(2)
-        .enable_all()
-        .build()
-        .unwrap();
-}
-
 #[cfg(target_os = "linux")]
 fn take_sc() {
     println!("No support on linux yet, coming soon hopefully");
@@ -59,11 +51,6 @@ fn take_sc() {
         Ok(res) => println!("{:?}", res),
         Err(_) => println!("Error"),
     }
-}
-
-#[derive(Clone)]
-enum UpdateText {
-    UpdateLabel(String),
 }
 
 fn get_lang_choices(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> {
@@ -128,18 +115,13 @@ pub fn build_ui(
     authwindow.set_child(Some(&api_key_set_box));
 
     add_actions(
-        &set_api_key_button,
-        &api_key_entry,
         &api_key_label,
         &source_lang_choice,
         &target_lang_choice,
         &label,
         &tbox,
         &mainwindow,
-        &textwindow,
         &button,
-        &source,
-        &target,
     );
     
     menu.append(&source);
@@ -168,7 +150,8 @@ pub fn build_ui(
                 @weak target_lang_choice, 
                 @strong source, 
                 @strong target => move |_| {
-            println!("registered click");
+
+            // Use the API to setup API dependent components
             let api_key = api_key_entry.text().to_string();
             api_key_label.set_text(&api_key);
             let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
@@ -185,34 +168,19 @@ pub fn build_ui(
 }
 
 fn add_actions(
-    set_api_key_button: &Button,
-    api_key_entry: &Entry,
     api_key_label: &Label,
     source_lang_choice: &Label,
     target_lang_choice: &Label,
     label: &Label,
     tbox: &gtk::Box,
     mainwindow: &gtk::ApplicationWindow,
-    textwindow: &gtk::ApplicationWindow,
     button: &Button,
-    source: &MenuItem,
-    target: &MenuItem,
 ) {
-    let rt = get_runtime();
-
     button.connect_clicked(
         glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label => move |_| {
-            // Set translation window opacity to 0
             tbox.set_opacity(0.0);
 
             take_sc();
-
-            let tokio_handle = rt.handle();
-
-            let (sender, receiver): (
-                gtk::glib::Sender<UpdateText>,
-                gtk::glib::Receiver<UpdateText>,
-            ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
             // let from_lang = source_lang_choice.text();
             let from_lang = "eng";

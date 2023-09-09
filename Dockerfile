@@ -15,7 +15,7 @@ RUN mkdir -p gtklib \
     && mkdir -p gtkapp/lib/gdk-pixbuf-2.0/ 
 
 # get the required mingw libs 
-RUN wget https://github.com/qarmin/gtk_library_store/releases/download/3.24.0/mingw64.zip
+RUN wget https://github.com/KaiErikNiermann/gtk_lib_files/releases/download/lib/mingw64.zip
 RUN unzip mingw64.zip -d gtklib
 
 # add windows target 
