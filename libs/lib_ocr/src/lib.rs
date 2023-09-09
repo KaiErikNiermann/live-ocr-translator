@@ -2,6 +2,11 @@ pub mod image;
 pub mod text;
 pub mod win_sc;
 
+pub fn get_tesseract_supported() -> Vec<String> {
+    rusty_tesseract::get_tesseract_langs()
+        .unwrap()
+}
+
 pub fn run_ocr(path: &str, lang: &str) -> String {
     let img = image::get_image(path);
     return text::clean_text(&image::text_from_image(

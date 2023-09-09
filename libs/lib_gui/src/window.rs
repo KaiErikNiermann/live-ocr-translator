@@ -53,7 +53,7 @@ fn take_sc() {
     }
 }
 
-fn get_lang_choices(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> {
+fn get_target_langs(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> {
     let res: Vec<lib_translator::Language> = match deepl.get_supported() {
         Ok(res) => res,
         Err(_) => panic!("Error getting supported languages"),
@@ -67,8 +67,7 @@ fn get_lang_choices(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> 
         .collect::<HashMap<String, MenuItem>>()
 }
 
-fn get_lang_dropdown(deepl: &lib_translator::DeepL, lang_choice: &Label) -> Menu {
-    let lang_choices = get_lang_choices(deepl);
+fn get_lang_dropdown(deepl: &lib_translator::DeepL, lang_choice: &Label, lang_choices: HashMap<String, MenuItem>) -> Menu {
     let lang_menu = Menu::new();
     for (lang_code_str, lang_choice_item) in lang_choices {
         lang_menu.append(&lang_choice_item);
@@ -80,6 +79,13 @@ fn get_lang_dropdown(deepl: &lib_translator::DeepL, lang_choice: &Label) -> Menu
         );
     }
     lang_menu
+}
+
+fn get_src_langs() -> HashMap<String, MenuItem> {
+    lib_ocr::get_tesseract_supported()
+        .into_iter()
+        .map(|lang_code| (lang_code.clone(), MenuItem::with_label(&lang_code)))
+        .collect::<HashMap<String, MenuItem>>()
 }
 
 pub fn build_ui(
@@ -156,8 +162,8 @@ pub fn build_ui(
             api_key_label.set_text(&api_key);
             let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
             
-            source.set_submenu(Some(&get_lang_dropdown(&deepl, &source_lang_choice)));
-            target.set_submenu(Some(&get_lang_dropdown(&deepl, &target_lang_choice)));
+            source.set_submenu(Some(&get_lang_dropdown(&deepl, &source_lang_choice, get_src_langs())));
+            target.set_submenu(Some(&get_lang_dropdown(&deepl, &target_lang_choice, get_target_langs(deepl))));
 
             mainwindow.show_all();
             textwindow.show_all();
@@ -182,15 +188,14 @@ fn add_actions(
 
             take_sc();
 
-            // let from_lang = source_lang_choice.text();
-            let from_lang = "eng";
+            let from_lang = source_lang_choice.text();
             let to_lang = target_lang_choice.text();
 
             #[cfg(target_os = "windows")]
             let text = lib_ocr::run_ocr("./screenshot.png", &from_lang);
 
             #[cfg(target_os = "linux")]
-            let text = lib_ocr::run_ocr("./placeholder.png", &from_lang);
+            let text = lib_ocr::run_ocr("./assets/placeholder_de.png", &from_lang);
             
             let api_key = api_key_label.text().to_string();
             let deepl = lib_translator::DeepL::new(api_key);

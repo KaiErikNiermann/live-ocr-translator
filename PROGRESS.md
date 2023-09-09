@@ -12,7 +12,9 @@ This is kind of the absolute basic use case I imagined, of just being able to ca
 
 - There is no downloading or uploading images anywhere and you don't need to pull out your phone, you just select exactly what you want to translate.
 
-With the core idea here being that you can translate anything anywhere on your desktop with the click of a button. Also a neat addition is the fact that this does not trigger the security black out you get with traditional tools like snipping tool in websites like crunchyroll, everything on the screen is unaffected even though you are still capturing screenshots. 
+With the core idea here being that you can translate anything anywhere on your desktop with the click of a button. Also a neat addition is the fact that this does not trigger the security black-out during capture you get with traditional software like snipping tool in websites using EME for DRM, everything on the screen is unaffected even though you are still capturing screenshots.
+
+The final image of the videoplayer is still black but for our purposes; since we only want the subtitles; this is basically to our benefit.
 
 ### Whats next ? 
 
