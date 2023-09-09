@@ -34,12 +34,12 @@ impl DeepL {
         self.auth_key = new_auth_key;
     }
 
-    pub async fn translate_text(
+    pub fn translate_text(
         &self,
         text: &str,
         target_lang: &str,
     ) -> Result<String, reqwest::Error> {
-        let client = Client::new();
+        let client = reqwest::blocking::Client::new();
         let url = "https://api-free.deepl.com/v2/translate";
 
         // Create the JSON data payload.
@@ -58,12 +58,11 @@ impl DeepL {
             .header("Content-Type", "application/json")
             .body(json_data)
             .send()
-            .await
             .unwrap();
 
         match response.error_for_status() {
             Ok(res) => {
-                let string_res = res.text().await.unwrap();
+                let string_res = res.text().unwrap();
                 let api_res: TranslationResponse = serde_json::from_str(&string_res).unwrap();
 
                 println!("{:?}", api_res.translations[0].text);

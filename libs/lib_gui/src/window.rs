@@ -121,7 +121,6 @@ pub fn build_ui(
 
     api_key_entry.set_placeholder_text(Some("DeepL API key"));
     
-    
     let api_key_set_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
     api_key_set_box.pack_start(&api_key_label, true, true, 10);
     api_key_set_box.pack_start(&api_key_entry, true, true, 10);
@@ -215,11 +214,6 @@ fn add_actions(
                 gtk::glib::Receiver<UpdateText>,
             ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
-            /*
-             * Because reqwuest is async this is the only somewhat sane approach I found for
-             * being able to get the translated text and then update the label. Credit to slomo and their
-             * blog here : https://coaxion.net/blog/2019/02/mpsc-channel-api-for-painless-usage-of-threads-with-gtk-in-rust/
-             */
             // let from_lang = source_lang_choice.text();
             let from_lang = "eng";
             let to_lang = target_lang_choice.text();
@@ -233,24 +227,12 @@ fn add_actions(
             let api_key = api_key_label.text().to_string();
             let deepl = lib_translator::DeepL::new(api_key);
 
-            tokio_handle.spawn(glib::clone!(@strong deepl, @strong to_lang => async move {
-                let translated_text = match deepl.translate_text(&text, &to_lang.to_uppercase()).await {
-                    Ok(text) => text,
-                    Err(_) => String::from("Could not translate")
-                };
+            let translated_text = match deepl.translate_text(&text, &to_lang.to_uppercase()) {
+                Ok(text) => text,
+                Err(_) => String::from("Could not translate")
+            };
 
-                let _ = sender.send(UpdateText::UpdateLabel(translated_text));
-            }));
-
-            let label_clone = label.clone();
-            receiver.attach(None, move |msg| {
-                match msg {
-                    UpdateText::UpdateLabel(text) => label_clone.set_text(text.as_str()),
-                }
-
-                glib::Continue(true)
-            });
-
+            label.set_text(&translated_text);
             label.set_line_wrap(true);
             label.set_size_request(500, -1);
         }),
