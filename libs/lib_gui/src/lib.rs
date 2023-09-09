@@ -31,6 +31,15 @@ pub fn run_app(app: &gtk::Application) {
                     opacity: 1.0,
                 }),
             ),
+            &window::window(
+                app,
+                &(window::WindowLayout {
+                    width: 400,
+                    height: 100,
+                    title: String::from("authwindow"),
+                    opacity: 1.0,
+                }),
+            ),
         );
     });
     app.run();

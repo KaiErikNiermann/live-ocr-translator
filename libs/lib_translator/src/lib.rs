@@ -39,9 +39,6 @@ impl DeepL {
         text: &str,
         target_lang: &str,
     ) -> Result<String, reqwest::Error> {
-        let auth_key = env::var("DEEPL_API_KEY").expect(
-            "DEEPL_API_KEY key is not set, set it in a .env file in the root dir of the project",
-        );
         let client = Client::new();
         let url = "https://api-free.deepl.com/v2/translate";
 
@@ -57,7 +54,7 @@ impl DeepL {
         // Build the request with headers.
         let response = client
             .post(url)
-            .header("Authorization", format!("DeepL-Auth-Key {}", auth_key))
+            .header("Authorization", format!("DeepL-Auth-Key {}", self.auth_key))
             .header("Content-Type", "application/json")
             .body(json_data)
             .send()

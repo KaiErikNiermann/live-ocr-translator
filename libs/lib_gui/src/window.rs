@@ -1,3 +1,4 @@
+use gtk::ffi::gtk_widget_set_visible;
 use gtk::glib::{Receiver, Sender};
 use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
@@ -91,7 +92,6 @@ fn get_lang_dropdown(deepl: &lib_translator::DeepL, lang_choice: &Label) -> Menu
             }),
         );
     }
-
     lang_menu
 }
 
@@ -99,6 +99,7 @@ pub fn build_ui(
     application: &Application,
     mainwindow: &ApplicationWindow,
     textwindow: &ApplicationWindow,
+    authwindow: &ApplicationWindow
 ) {
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let tbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
@@ -109,77 +110,99 @@ pub fn build_ui(
     let label = gtk::Label::new(Some("<translated text>"));
     let button = Button::with_label("Translate");
     let source_lang_choice = gtk::Label::new(Some("eng"));
-    let target_lang_choice = gtk::Label::new(Some("eng"));
+    let target_lang_choice = gtk::Label::new(Some("de"));
     let api_key_entry = gtk::Entry::new();
+    let api_key_label = gtk::Label::new(Some("Selected API key"));
     let set_api_key_button = Button::with_label("Set API key");
-    let deepl = &mut lib_translator::DeepL::new(String::from(""));
 
     let menu = MenuBar::new();
     let source = MenuItem::with_label("Source");
     let target = MenuItem::with_label("Target");
 
+    api_key_entry.set_placeholder_text(Some("DeepL API key"));
+    
+    
+    let api_key_set_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    api_key_set_box.pack_start(&api_key_label, true, true, 10);
+    api_key_set_box.pack_start(&api_key_entry, true, true, 10);
+    api_key_set_box.pack_end(&set_api_key_button, false, true, 10);
+    authwindow.set_child(Some(&api_key_set_box));
+
     add_actions(
-        deepl,
         &set_api_key_button,
         &api_key_entry,
+        &api_key_label,
         &source_lang_choice,
         &target_lang_choice,
         &label,
         &tbox,
         &mainwindow,
+        &textwindow,
         &button,
+        &source,
+        &target,
     );
-
-    api_key_entry.set_placeholder_text(Some("DeepL API key"));
-    source.set_submenu(Some(&get_lang_dropdown(&deepl, &source_lang_choice)));
-    target.set_submenu(Some(&get_lang_dropdown(&deepl, &target_lang_choice)));
-
+    
     menu.append(&source);
     menu.append(&target);
-
-    let api_key_set_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    api_key_set_box.pack_start(&api_key_entry, true, true, 10);
-    api_key_set_box.pack_start(&set_api_key_button, false, true, 10);
-
+    
     let button_lang_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     button_lang_box.pack_start(&button, true, true, 10);
     button_lang_box.pack_start(&source_lang_choice, false, true, 10);
     button_lang_box.pack_start(&target_lang_choice, false, true, 10);
 
     vbox.pack_start(&menu, false, false, 10);
-    vbox.pack_end(&api_key_set_box, false, false, 10);
     vbox.pack_start(&button_lang_box, false, false, 10);
     vbox.pack_start(&label, true, true, 10);
-
+    
     vbox.set_margin(25);
-
+    
     textwindow.set_child(Some(&vbox));
     mainwindow.set_child(Some(&tbox));
 
-    mainwindow.show_all();
-    textwindow.show_all();
+    set_api_key_button.connect_clicked(
+        glib::clone!(
+                @weak mainwindow, 
+                @weak textwindow, 
+                @strong api_key_label, 
+                @weak source_lang_choice, 
+                @weak target_lang_choice, 
+                @strong source, 
+                @strong target => move |_| {
+            println!("registered click");
+            let api_key = api_key_entry.text().to_string();
+            api_key_label.set_text(&api_key);
+            let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
+            
+            source.set_submenu(Some(&get_lang_dropdown(&deepl, &source_lang_choice)));
+            target.set_submenu(Some(&get_lang_dropdown(&deepl, &target_lang_choice)));
+
+            mainwindow.show_all();
+            textwindow.show_all();
+        })
+    );
+    
+    authwindow.show_all();
 }
 
 fn add_actions(
-    deepl: &mut lib_translator::DeepL,
     set_api_key_button: &Button,
     api_key_entry: &Entry,
+    api_key_label: &Label,
     source_lang_choice: &Label,
     target_lang_choice: &Label,
     label: &Label,
     tbox: &gtk::Box,
     mainwindow: &gtk::ApplicationWindow,
+    textwindow: &gtk::ApplicationWindow,
     button: &Button,
+    source: &MenuItem,
+    target: &MenuItem,
 ) {
     let rt = get_runtime();
-    deepl.set(String::from("e7624521-5fdf-cb4f-eae4-c1d6c024d571:fx"));
-
-    set_api_key_button.connect_clicked(glib::clone!(@weak api_key_entry => move |_| {
-        println!("Set api key to {}", api_key_entry.text());
-    }));
 
     button.connect_clicked(
-        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong deepl, @strong target_lang_choice => move |_| {
+        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label => move |_| {
             // Set translation window opacity to 0
             tbox.set_opacity(0.0);
 
@@ -206,6 +229,9 @@ fn add_actions(
 
             #[cfg(target_os = "linux")]
             let text = lib_ocr::run_ocr("./placeholder.png", &from_lang);
+            
+            let api_key = api_key_label.text().to_string();
+            let deepl = lib_translator::DeepL::new(api_key);
 
             tokio_handle.spawn(glib::clone!(@strong deepl, @strong to_lang => async move {
                 let translated_text = match deepl.translate_text(&text, &to_lang.to_uppercase()).await {
