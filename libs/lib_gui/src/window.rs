@@ -1,14 +1,15 @@
-use ::glib::{Receiver, Sender};
+use gtk::glib::{Receiver, Sender};
+use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
-use gtk::{glib, Application, ApplicationWindow, Button, Menu, MenuBar, MenuItem};
 use lib_ocr::win_sc::*;
 use lib_translator;
+use lib_translator::Language;
 use std::collections::HashMap;
 use std::env;
+use std::hash::Hash;
 use std::thread;
 use tokio::runtime;
 use tokio::runtime::Runtime;
-use lib_translator::Language;
 
 pub struct WindowLayout {
     pub width: i32,
@@ -64,42 +65,33 @@ enum UpdateText {
     UpdateLabel(String),
 }
 
-enum UpdateLang {
-    UpdateLang(String),
-}
-
-async fn get_lang_choices() -> HashMap<String, MenuItem> {
-    let rt = get_runtime();
-
-    let res: Vec<lib_translator::Language> = 
-        match lib_translator::get_supported().await {
-            Ok(res) => res,
-            Err(_) => panic!("Error getting supported languages")
+fn get_lang_choices(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> {
+    let res: Vec<lib_translator::Language> = match deepl.get_supported() {
+        Ok(res) => res,
+        Err(_) => panic!("Error getting supported languages"),
     };
 
-    res
-        .iter()
+    res.iter()
         .map(|lang: &Language| {
-            (String::from(&lang.language[0..1]), MenuItem::with_label(&lang.language[0..1]))
+            let lang_code = String::from(&lang.language[0..2]).to_lowercase();
+            (lang_code.clone(), MenuItem::with_label(&lang_code))
         })
         .collect::<HashMap<String, MenuItem>>()
 }
 
-fn get_lang_dropdown(lang_choice: &Label) -> Menu {
-    let lang_choices: HashMap<String, MenuItem> = HashMap::from([
-        (String::from("jp"), MenuItem::with_label("jp")),
-        (String::from("eng"), MenuItem::with_label("eng")),
-        (String::from("de"), MenuItem::with_label("de")),
-    ]);
-
+fn get_lang_dropdown(deepl: &lib_translator::DeepL, lang_choice: &Label) -> Menu {
+    let lang_choices = get_lang_choices(deepl);
     let lang_menu = Menu::new();
     for (lang_code_str, lang_choice_item) in lang_choices {
         lang_menu.append(&lang_choice_item);
-        lang_choice_item.connect_activate(glib::clone!(@strong lang_code_str, @weak lang_choice => move |_| {
-            lang_choice.set_text(&lang_code_str);
-            println!("You chose {}", lang_code_str);
-        }));
+        lang_choice_item.connect_activate(
+            glib::clone!(@strong lang_code_str, @weak lang_choice => move |_| {
+                lang_choice.set_text(&lang_code_str);
+                println!("You chose {}", lang_code_str);
+            }),
+        );
     }
+
     lang_menu
 }
 
@@ -116,82 +108,125 @@ pub fn build_ui(
 
     let label = gtk::Label::new(Some("<translated text>"));
     let button = Button::with_label("Translate");
-    let lang_choice = gtk::Label::new(Some("eng")); 
+    let source_lang_choice = gtk::Label::new(Some("eng"));
+    let target_lang_choice = gtk::Label::new(Some("eng"));
+    let api_key_entry = gtk::Entry::new();
+    let set_api_key_button = Button::with_label("Set API key");
+    let deepl = &mut lib_translator::DeepL::new(String::from(""));
 
     let menu = MenuBar::new();
     let source = MenuItem::with_label("Source");
     let target = MenuItem::with_label("Target");
 
-    source.set_submenu(Some(&get_lang_dropdown(&lang_choice)));
-    target.set_submenu(Some(&get_lang_dropdown(&lang_choice)));
+    add_actions(
+        deepl,
+        &set_api_key_button,
+        &api_key_entry,
+        &source_lang_choice,
+        &target_lang_choice,
+        &label,
+        &tbox,
+        &mainwindow,
+        &button,
+    );
+
+    api_key_entry.set_placeholder_text(Some("DeepL API key"));
+    source.set_submenu(Some(&get_lang_dropdown(&deepl, &source_lang_choice)));
+    target.set_submenu(Some(&get_lang_dropdown(&deepl, &target_lang_choice)));
 
     menu.append(&source);
     menu.append(&target);
 
+    let api_key_set_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    api_key_set_box.pack_start(&api_key_entry, true, true, 10);
+    api_key_set_box.pack_start(&set_api_key_button, false, true, 10);
+
     let button_lang_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     button_lang_box.pack_start(&button, true, true, 10);
-    button_lang_box.pack_start(&lang_choice, false, true, 10); 
+    button_lang_box.pack_start(&source_lang_choice, false, true, 10);
+    button_lang_box.pack_start(&target_lang_choice, false, true, 10);
 
     vbox.pack_start(&menu, false, false, 10);
-    vbox.pack_start(&button_lang_box, false, false, 10); 
-    vbox.pack_start(&label, false, false, 10);
+    vbox.pack_end(&api_key_set_box, false, false, 10);
+    vbox.pack_start(&button_lang_box, false, false, 10);
+    vbox.pack_start(&label, true, true, 10);
 
     vbox.set_margin(25);
-
-    let rt = get_runtime();
-
-    #[cfg(target_os = "linux")]
-    let fp = "./placeholder.png";
-
-    #[cfg(target_os = "windows")]
-    let fp = "./screenshot.png";
-
-    button.connect_clicked(glib::clone!(@weak label, @weak tbox => move |_| {
-        // Set translation window opacity to 0
-        tbox.set_opacity(0.0);
-        
-        take_sc();
-        
-        let tokio_handle = rt.handle();
-        
-        let (sender, receiver): (
-            gtk::glib::Sender<UpdateText>,
-            gtk::glib::Receiver<UpdateText>,
-        ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
-        
-        /*
-         * Because reqwuest is async this is the only somewhat sane approach I found for 
-         * being able to get the translated text and then update the label. Credit to slomo and their 
-         * blog here : https://coaxion.net/blog/2019/02/mpsc-channel-api-for-painless-usage-of-threads-with-gtk-in-rust/
-         */
-        let src_lang = lang_choice.text();
-        let text = lib_ocr::run_ocr(fp, &src_lang);
-
-        tokio_handle.spawn(async move {
-            let translated_text = match lib_translator::translate_text(&text).await {
-                Ok(text) => text,
-                Err(_) => String::from("Could not translate")
-            };
-            
-            let _ = sender.send(UpdateText::UpdateLabel(translated_text));
-        });
-
-        let label_clone = label.clone();
-        receiver.attach(None, move |msg| {
-            match msg {
-                UpdateText::UpdateLabel(text) => label_clone.set_text(text.as_str()),
-            }
-
-            glib::Continue(true)
-        });
-
-        label.set_line_wrap(true);
-        label.set_size_request(500, -1);
-    }));
 
     textwindow.set_child(Some(&vbox));
     mainwindow.set_child(Some(&tbox));
 
     mainwindow.show_all();
     textwindow.show_all();
+}
+
+fn add_actions(
+    deepl: &mut lib_translator::DeepL,
+    set_api_key_button: &Button,
+    api_key_entry: &Entry,
+    source_lang_choice: &Label,
+    target_lang_choice: &Label,
+    label: &Label,
+    tbox: &gtk::Box,
+    mainwindow: &gtk::ApplicationWindow,
+    button: &Button,
+) {
+    let rt = get_runtime();
+    deepl.set(String::from("e7624521-5fdf-cb4f-eae4-c1d6c024d571:fx"));
+
+    set_api_key_button.connect_clicked(glib::clone!(@weak api_key_entry => move |_| {
+        println!("Set api key to {}", api_key_entry.text());
+    }));
+
+    button.connect_clicked(
+        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong deepl, @strong target_lang_choice => move |_| {
+            // Set translation window opacity to 0
+            tbox.set_opacity(0.0);
+
+            take_sc();
+
+            let tokio_handle = rt.handle();
+
+            let (sender, receiver): (
+                gtk::glib::Sender<UpdateText>,
+                gtk::glib::Receiver<UpdateText>,
+            ) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+
+            /*
+             * Because reqwuest is async this is the only somewhat sane approach I found for
+             * being able to get the translated text and then update the label. Credit to slomo and their
+             * blog here : https://coaxion.net/blog/2019/02/mpsc-channel-api-for-painless-usage-of-threads-with-gtk-in-rust/
+             */
+            // let from_lang = source_lang_choice.text();
+            let from_lang = "eng";
+            let to_lang = target_lang_choice.text();
+
+            #[cfg(target_os = "windows")]
+            let text = lib_ocr::run_ocr("./screenshot.png", &from_lang);
+
+            #[cfg(target_os = "linux")]
+            let text = lib_ocr::run_ocr("./placeholder.png", &from_lang);
+
+            tokio_handle.spawn(glib::clone!(@strong deepl, @strong to_lang => async move {
+                let translated_text = match deepl.translate_text(&text, &to_lang.to_uppercase()).await {
+                    Ok(text) => text,
+                    Err(_) => String::from("Could not translate")
+                };
+
+                let _ = sender.send(UpdateText::UpdateLabel(translated_text));
+            }));
+
+            let label_clone = label.clone();
+            receiver.attach(None, move |msg| {
+                match msg {
+                    UpdateText::UpdateLabel(text) => label_clone.set_text(text.as_str()),
+                }
+
+                glib::Continue(true)
+            });
+
+            label.set_line_wrap(true);
+            label.set_size_request(500, -1);
+        }),
+    );
 }
