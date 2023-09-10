@@ -8,7 +8,7 @@
 
 This is basically just a desktop implementation of googles version of live translation. To my knowledge the three main options for translating on screen content are
 
-- Screenshot
+- Uploading a screenshot
 - Google Translate app live translate
 - Copy pasting text
 
@@ -22,8 +22,8 @@ This project aims to add a 4th option where you can specify a region of text on 
 
 ## Features
 
-- [ ] Basic image translation for common languages
-  - [ ] Windows
+- [x] Basic image translation for common languages
+  - [x] Windows
   - [ ] Linux
 - [ ] Live text translation
   - [ ] Windows

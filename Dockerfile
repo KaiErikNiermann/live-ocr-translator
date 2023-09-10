@@ -28,7 +28,7 @@ RUN apt-get install gcc-mingw-w64-x86-64 -y
 # download tesseract-ocr and add to gtkapp
 RUN apt install python3-pip -y \
     && pip3 install gdown --break-system-packages \
-    && gdown --fuzzy https://drive.google.com/file/d/1ipXvr6M9fYcGde7263WQ10aZpbhssvmC/view?usp=drive_link \
+    && gdown --fuzzy https://drive.google.com/file/d/19mg5xJAzKIkWQPns8x8h-eo-NgB7kBpM/view?usp=sharing \
     && unzip tesseract-ocr.zip -d .
 
 RUN chmod +x build.sh
