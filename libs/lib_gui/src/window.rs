@@ -5,9 +5,12 @@ use gtk::{prelude::*, Label};
 use lib_ocr::win_sc::*;
 use lib_translator;
 use lib_translator::Language;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
+use std::fs::File;
 use std::hash::Hash;
+use std::io::prelude::*;
 use std::thread;
 use tokio::runtime;
 use tokio::runtime::Runtime;
@@ -67,7 +70,11 @@ fn get_target_langs(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> 
         .collect::<HashMap<String, MenuItem>>()
 }
 
-fn get_lang_dropdown(deepl: &lib_translator::DeepL, lang_choice: &Label, lang_choices: HashMap<String, MenuItem>) -> Menu {
+fn get_lang_dropdown(
+    deepl: &lib_translator::DeepL,
+    lang_choice: &Label,
+    lang_choices: HashMap<String, MenuItem>,
+) -> Menu {
     let lang_menu = Menu::new();
     for (lang_code_str, lang_choice_item) in lang_choices {
         lang_menu.append(&lang_choice_item);
@@ -88,11 +95,60 @@ fn get_src_langs() -> HashMap<String, MenuItem> {
         .collect::<HashMap<String, MenuItem>>()
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct ConfigOptions {
+    api_key: String,
+}
+
+fn create_config(config: &ConfigOptions) {
+    let mut file = match File::create("config.txt") {
+        Ok(file) => file,
+        Err(e) => panic!("{:?}", e),
+    };
+
+    let _ = file.write_all(serde_json::to_string(config).unwrap().as_bytes());
+}
+
+fn get_config(config_file: &mut File) -> ConfigOptions {
+    let mut string_config = String::new();
+    config_file.read_to_string(&mut string_config).unwrap();
+    let config: ConfigOptions = serde_json::from_str(&string_config).unwrap();
+    return config;
+}
+
+pub fn build_api_dependent(
+    api_key: &str,
+    api_key_label: &Label,
+    source_lang_choice: &Label,
+    target_lang_choice: &Label,
+    source: &MenuItem,
+    target: &MenuItem,
+    mainwindow: &ApplicationWindow,
+    textwindow: &ApplicationWindow,
+) {
+    api_key_label.set_text(&api_key);
+    let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
+
+    source.set_submenu(Some(&get_lang_dropdown(
+        &deepl,
+        &source_lang_choice,
+        get_src_langs(),
+    )));
+    target.set_submenu(Some(&get_lang_dropdown(
+        &deepl,
+        &target_lang_choice,
+        get_target_langs(deepl),
+    )));
+
+    mainwindow.show_all();
+    textwindow.show_all();
+}
+
 pub fn build_ui(
     application: &Application,
     mainwindow: &ApplicationWindow,
     textwindow: &ApplicationWindow,
-    authwindow: &ApplicationWindow
+    authwindow: &ApplicationWindow,
 ) {
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let tbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
@@ -113,7 +169,7 @@ pub fn build_ui(
     let target = MenuItem::with_label("Target");
 
     api_key_entry.set_placeholder_text(Some("DeepL API key"));
-    
+
     let api_key_set_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
     api_key_set_box.pack_start(&api_key_label, true, true, 10);
     api_key_set_box.pack_start(&api_key_entry, true, true, 10);
@@ -129,10 +185,10 @@ pub fn build_ui(
         &mainwindow,
         &button,
     );
-    
+
     menu.append(&source);
     menu.append(&target);
-    
+
     let button_lang_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     button_lang_box.pack_start(&button, true, true, 10);
     button_lang_box.pack_start(&source_lang_choice, false, true, 10);
@@ -141,11 +197,20 @@ pub fn build_ui(
     vbox.pack_start(&menu, false, false, 10);
     vbox.pack_start(&button_lang_box, false, false, 10);
     vbox.pack_start(&label, true, true, 10);
-    
+
     vbox.set_margin(25);
-    
+
     textwindow.set_child(Some(&vbox));
     mainwindow.set_child(Some(&tbox));
+
+    match File::open("config.txt") {
+        Ok(config_file) => {
+            let mut file = config_file;
+            let app_configuration = get_config(&mut file);
+            build_api_dependent(&app_configuration.api_key, &api_key_label, &source_lang_choice, &target_lang_choice, &source, &target, mainwindow, textwindow)
+        },
+        Err(_) =>  println!("No saved configuration found")
+    };
 
     set_api_key_button.connect_clicked(
         glib::clone!(
@@ -157,19 +222,12 @@ pub fn build_ui(
                 @strong source, 
                 @strong target => move |_| {
 
-            // Use the API to setup API dependent components
             let api_key = api_key_entry.text().to_string();
-            api_key_label.set_text(&api_key);
-            let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
-            
-            source.set_submenu(Some(&get_lang_dropdown(&deepl, &source_lang_choice, get_src_langs())));
-            target.set_submenu(Some(&get_lang_dropdown(&deepl, &target_lang_choice, get_target_langs(deepl))));
-
-            mainwindow.show_all();
-            textwindow.show_all();
+            build_api_dependent(&api_key, &api_key_label, &source_lang_choice, &target_lang_choice, &source, &target, &mainwindow, &textwindow);
+            create_config(&ConfigOptions { api_key: api_key });
         })
     );
-    
+
     authwindow.show_all();
 }
 

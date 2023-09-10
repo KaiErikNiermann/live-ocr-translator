@@ -1,6 +1,7 @@
 /target
 libs/**/target
 .env
+config.txt
 
 # compilation testing
 gtkapp

@@ -34,11 +34,7 @@ impl DeepL {
         self.auth_key = new_auth_key;
     }
 
-    pub fn translate_text(
-        &self,
-        text: &str,
-        target_lang: &str,
-    ) -> Result<String, reqwest::Error> {
+    pub fn translate_text(&self, text: &str, target_lang: &str) -> Result<String, reqwest::Error> {
         let client = reqwest::blocking::Client::new();
         let url = "https://api-free.deepl.com/v2/translate";
 

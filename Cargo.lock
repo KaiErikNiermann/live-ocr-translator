@@ -1006,6 +1006,8 @@ dependencies = [
  "gtk",
  "lib_ocr",
  "lib_translator",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

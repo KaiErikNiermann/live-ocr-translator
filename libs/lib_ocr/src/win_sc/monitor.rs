@@ -1,5 +1,5 @@
-use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::Foundation::RECT;
+use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::UI::WindowsAndMessaging::GetDesktopWindow;
 
 use crate::win_sc::{create_capture_item, init, take_sc, Handle};

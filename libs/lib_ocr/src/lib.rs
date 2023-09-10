@@ -3,8 +3,7 @@ pub mod text;
 pub mod win_sc;
 
 pub fn get_tesseract_supported() -> Vec<String> {
-    rusty_tesseract::get_tesseract_langs()
-        .unwrap()
+    rusty_tesseract::get_tesseract_langs().unwrap()
 }
 
 pub fn run_ocr(path: &str, lang: &str) -> String {
