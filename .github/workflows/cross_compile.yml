@@ -17,6 +17,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         
+      - name: Run basic tests before compiling
+        run: cargo test --all 
+
       - name: Build cross-compile container
         run: docker build . -t gtkrs-crosscomp
         

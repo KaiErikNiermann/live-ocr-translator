@@ -123,17 +123,36 @@ impl DeepL {
 
 #[cfg(test)]
 mod tests {
+    use dotenv::dotenv;
+    use std::env;
+    use crate::DeepL; 
+
+    fn translator() -> DeepL {
+        dotenv().ok();
+        let auth_key = env::var("DEEPL_API_KEY").expect(
+            "DEEPL_API_KEY key is not set, set it in a .env file in the root dir of the project",
+        );
+        DeepL::new(auth_key)
+    }
 
     #[test]
     fn basic_translation() {
-        
+        let text: &str = "This is a basic sentence I want to translate.";
+        match translator().translate_text(text, "DE") {
+            Ok(translated_text) =>  {
+                assert_eq!(translated_text, "Dies ist ein einfacher Satz, den ich übersetzen möchte.")
+            },
+            Err(e) => panic!("Failed to translated text: {:?}", e)
+        }
     }
 
+    #[test]
     fn get_supported_languages() {
-
-    }
-
-    fn trasnlate_longer_test() {
-        
+        match translator().get_supported() {
+            Ok(supported_langs) => {
+                assert!(!supported_langs.is_empty())
+            }, 
+            Err(e) => panic!("Failed to get supported langs: {:?}", e) 
+        }
     }
 }
