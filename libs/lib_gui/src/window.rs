@@ -207,19 +207,28 @@ pub fn build_ui(
         Ok(config_file) => {
             let mut file = config_file;
             let app_configuration = get_config(&mut file);
-            build_api_dependent(&app_configuration.api_key, &api_key_label, &source_lang_choice, &target_lang_choice, &source, &target, mainwindow, textwindow)
-        },
-        Err(_) =>  println!("No saved configuration found")
+            build_api_dependent(
+                &app_configuration.api_key,
+                &api_key_label,
+                &source_lang_choice,
+                &target_lang_choice,
+                &source,
+                &target,
+                mainwindow,
+                textwindow,
+            )
+        }
+        Err(_) => println!("No saved configuration found"),
     };
 
     set_api_key_button.connect_clicked(
         glib::clone!(
-                @weak mainwindow, 
-                @weak textwindow, 
-                @strong api_key_label, 
-                @weak source_lang_choice, 
-                @weak target_lang_choice, 
-                @strong source, 
+                @weak mainwindow,
+                @weak textwindow,
+                @strong api_key_label,
+                @weak source_lang_choice,
+                @weak target_lang_choice,
+                @strong source,
                 @strong target => move |_| {
 
             let api_key = api_key_entry.text().to_string();

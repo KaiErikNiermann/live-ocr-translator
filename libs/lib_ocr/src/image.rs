@@ -2,7 +2,7 @@ use image::io::Reader as ImageReader;
 use rusty_tesseract::{Args, Image};
 use std::env;
 
-pub fn get_image(path: &str) -> Image {
+pub fn get_image(path: &str) -> Result<Image, String> {
     // print cwd
     if let Ok(current_dir) = env::current_dir() {
         if let Some(dir_str) = current_dir.to_str() {
@@ -17,12 +17,15 @@ pub fn get_image(path: &str) -> Image {
     // concat cwd with path
     let path = format!("{}/{}", env::current_dir().unwrap().to_str().unwrap(), path);
 
-    let img = match ImageReader::open(path) {
-        Ok(res) => res.decode().unwrap(),
-        Err(err) => panic!("{:?}", err),
+    match ImageReader::open(path) {
+        Ok(res) => {
+            let img = res.decode().unwrap();
+            return Ok(Image::from_dynamic_image(&img).unwrap()) 
+        },
+        Err(err) => {
+            return Err(format!("{:?}", err));
+        }
     };
-
-    return Image::from_dynamic_image(&img).unwrap();
 }
 
 pub fn text_from_image(img: &Image, args: &Args) -> String {

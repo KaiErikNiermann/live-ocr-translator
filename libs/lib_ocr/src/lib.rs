@@ -7,14 +7,20 @@ pub fn get_tesseract_supported() -> Vec<String> {
 }
 
 pub fn run_ocr(path: &str, lang: &str) -> String {
-    let img = image::get_image(path);
-    return text::clean_text(&image::text_from_image(
-        &img,
-        &(rusty_tesseract::Args {
-            lang: String::from(lang),
-            ..Default::default()
-        }),
-    ));
+    match image::get_image(path) {
+        Ok(img) => {
+            return text::clean_text(&image::text_from_image(
+                &img,
+                &(rusty_tesseract::Args {
+                    lang: String::from(lang),
+                    ..Default::default()
+                }),
+            ));
+        },
+        Err(err_msg) => {
+            return err_msg;
+        }
+    }; 
 }
 
 #[cfg(test)]

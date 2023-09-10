@@ -1,4 +1,4 @@
-use reqwest::{Client, Request, Response};
+use reqwest::{self, Client, Request, Response, Method, Error, dns::Resolving};
 use serde::{Deserialize, Serialize};
 use std::env;
 
@@ -34,27 +34,61 @@ impl DeepL {
         self.auth_key = new_auth_key;
     }
 
-    pub fn translate_text(&self, text: &str, target_lang: &str) -> Result<String, reqwest::Error> {
+    fn request_handler(
+        &self, 
+        method: Method,
+        endpoint: &str, 
+        params: Option<&[(&str, &str)]>
+    ) -> Result<reqwest::blocking::Response, reqwest::Error> {
         let client = reqwest::blocking::Client::new();
-        let url = "https://api-free.deepl.com/v2/translate";
+        let base_url = "https://api-free.deepl.com/v2";
+        let url = format!("{}{}", base_url, endpoint);
+        let request = client.request(method.clone(), url).header("Authorization", format!("DeepL-Auth-Key {}", self.auth_key));
+        
+        let response = match params {
+            Some(params) => {
+                match method {
+                    Method::GET => request.query(params).send(),
+                    Method::PATCH | Method::POST | Method::PUT => {
+                        request.form(params).send()
+                    },
+                    _ => unreachable!("Only GET, PATCH, POST and PUT are supported with params."),
+                }
+            },
+            None => request.send(),
+        };
 
-        // Create the JSON data payload.
-        let json_data = format!(
-            r#"{{
-                "text": ["{}"],
-                "target_lang": "{}"
-            }}"#,
-            text, target_lang
-        );
+        let res = match response {
+            Ok(response) if response.status().is_success() => {
+                println!("Successful API request");
+                response
+            },
+            Ok(response) if response.status() == reqwest::StatusCode::UNAUTHORIZED => {
+                println!("Unauthorized request");
+                response.error_for_status()?
+            }
+            Ok(response) if response.status() == reqwest::StatusCode::FORBIDDEN => {
+                response.error_for_status()?
+            }
+            Ok(response) if response.status() == reqwest::StatusCode::NOT_FOUND => {
+                response.error_for_status()?
+            }
+            Ok(response) => response,  
+            Err(e) => {
+                panic!("{:?}", e);
+            }
+        };
 
-        // Build the request with headers.
-        let response = client
-            .post(url)
-            .header("Authorization", format!("DeepL-Auth-Key {}", self.auth_key))
-            .header("Content-Type", "application/json")
-            .body(json_data)
-            .send()
-            .unwrap();
+        Ok(res)
+    }
+
+    pub fn translate_text(&self, text: &str, target_lang: &str) -> Result<String, reqwest::Error> {
+        let query = vec![
+            ("target_lang", target_lang),
+            ("text", text)
+        ];
+
+        let response = self.request_handler(Method::POST, "/translate", Some(&query))?;
 
         match response.error_for_status() {
             Ok(res) => {
@@ -73,14 +107,7 @@ impl DeepL {
     }
 
     pub fn get_supported(&self) -> Result<Vec<Language>, reqwest::Error> {
-        let client = reqwest::blocking::Client::new();
-        let url = "https://api-free.deepl.com/v2/languages?type=target";
-
-        let response = client
-            .get(url)
-            .header("Authorization", format!("DeepL-Auth-Key {}", self.auth_key))
-            .send()
-            .unwrap();
+        let response = self.request_handler(Method::GET, "/languages?type=target", None)?;
 
         match response.error_for_status() {
             Ok(res) => {
