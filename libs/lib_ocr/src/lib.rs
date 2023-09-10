@@ -28,8 +28,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {}
+    fn basic_ocr_example() {
+
+    }
 
     #[test]
-    fn test_ocr_add() {}
+    fn get_tesseract_supported() {
+
+    }
+
+    #[test]
+    fn advanced_ocr_example() {
+        
+    }
 }

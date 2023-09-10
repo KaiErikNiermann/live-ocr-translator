@@ -120,3 +120,20 @@ impl DeepL {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn basic_translation() {
+        
+    }
+
+    fn get_supported_languages() {
+
+    }
+
+    fn trasnlate_longer_test() {
+        
+    }
+}

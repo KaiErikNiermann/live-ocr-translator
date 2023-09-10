@@ -1,5 +1,3 @@
-use gtk::ffi::gtk_widget_set_visible;
-use gtk::glib::{Receiver, Sender};
 use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
 use lib_ocr::win_sc::*;
@@ -9,11 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::hash::Hash;
 use std::io::prelude::*;
-use std::thread;
-use tokio::runtime;
-use tokio::runtime::Runtime;
 
 pub struct WindowLayout {
     pub width: i32,
@@ -71,7 +65,6 @@ fn get_target_langs(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> 
 }
 
 fn get_lang_dropdown(
-    deepl: &lib_translator::DeepL,
     lang_choice: &Label,
     lang_choices: HashMap<String, MenuItem>,
 ) -> Menu {
@@ -130,12 +123,10 @@ pub fn build_api_dependent(
     let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
 
     source.set_submenu(Some(&get_lang_dropdown(
-        &deepl,
         &source_lang_choice,
         get_src_langs(),
     )));
     target.set_submenu(Some(&get_lang_dropdown(
-        &deepl,
         &target_lang_choice,
         get_target_langs(deepl),
     )));
@@ -160,7 +151,7 @@ pub fn build_ui(
     let button = Button::with_label("Translate");
     let source_lang_choice = gtk::Label::new(Some("eng"));
     let target_lang_choice = gtk::Label::new(Some("de"));
-    let api_key_entry = gtk::Entry::new();
+    let api_key_entry = Entry::new();
     let api_key_label = gtk::Label::new(Some("Selected API key"));
     let set_api_key_button = Button::with_label("Set API key");
 
