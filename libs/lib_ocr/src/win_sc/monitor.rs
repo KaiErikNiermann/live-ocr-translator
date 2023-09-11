@@ -38,6 +38,6 @@ pub fn monitor_sc(rect: Option<&RECT>) -> DynamicImage {
 
     match take_sc(&monitor_capture_item, &capture_rect) {
         Ok(dynamic_image) => dynamic_image,
-        Err(error) => panic!("Failed to take screenshot: {:?}", error)
+        Err(error) => panic!("Failed to take screenshot: {:?}", error),
     }
 }

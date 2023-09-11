@@ -1,7 +1,7 @@
 extern crate image;
 use image::{DynamicImage, ImageBuffer, Pixel, Rgba};
-use std::sync::mpsc::channel;
 use rusty_tesseract::Image;
+use std::sync::mpsc::channel;
 use windows::core::ComInterface;
 use windows::core::{IInspectable, Result, HSTRING};
 use windows::Foundation::TypedEventHandler;
@@ -21,6 +21,9 @@ use windows::Win32::Graphics::Direct3D11::{
 use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows::Win32::System::WinRT::{
     Graphics::Capture::IGraphicsCaptureItemInterop, RoInitialize, RO_INIT_MULTITHREADED,
+};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetSystemMetrics, SM_CXPADDEDBORDER, SM_CYCAPTION, SM_CYFRAME,
 };
 
 use crate::text;
@@ -44,10 +47,13 @@ pub struct WindowRect {
 #[derive(Debug)]
 struct ResourceSize {
     width: u32,
-    height: u32
+    height: u32,
 }
 
-fn create_dynamic_image(bits: Vec<u8>, resource_size: ResourceSize) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
+fn create_dynamic_image(
+    bits: Vec<u8>,
+    resource_size: ResourceSize,
+) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
     // Create a new RGBA image with the given dimensions
     let mut img = ImageBuffer::new(resource_size.width, resource_size.height);
 
@@ -56,10 +62,10 @@ fn create_dynamic_image(bits: Vec<u8>, resource_size: ResourceSize) -> std::resu
         let offset = (y * resource_size.width + x) as usize * 4; // 4 channels (R, G, B, A)
         if offset + 3 < bits.len() {
             let rgba = Rgba([
-                bits[offset],      // Red
-                bits[offset + 1],  // Green
-                bits[offset + 2],  // Blue
-                bits[offset + 3],  // Alpha
+                bits[offset],     // Red
+                bits[offset + 1], // Green
+                bits[offset + 2], // Blue
+                bits[offset + 3], // Alpha
             ]);
             *pixel = rgba;
         }
@@ -68,10 +74,16 @@ fn create_dynamic_image(bits: Vec<u8>, resource_size: ResourceSize) -> std::resu
     // Convert the ImageBuffer to a DynamicImage
     let dynamic_image = DynamicImage::ImageRgba8(img);
 
-    println!("DYNAMIC IMAGE TESTS {}", text::clean_text(&crate::image::text_from_image(&Image::from_dynamic_image(&dynamic_image).unwrap(), &(rusty_tesseract::Args {
-        lang: String::from("eng"),
-        ..Default::default()
-    }))));
+    println!(
+        "DYNAMIC IMAGE TESTS {}",
+        text::clean_text(&crate::image::text_from_image(
+            &Image::from_dynamic_image(&dynamic_image).unwrap(),
+            &(rusty_tesseract::Args {
+                lang: String::from("eng"),
+                ..Default::default()
+            })
+        ))
+    );
 
     Ok(dynamic_image)
 }
@@ -130,7 +142,10 @@ fn init() {
     }
 }
 
-fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
+fn take_sc(
+    item: &GraphicsCaptureItem,
+    rect: &RECT,
+) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
     // The size of the target of the capture.
     let item_size = item.Size()?;
     println!("item_size: {:?}", item_size);
@@ -209,9 +224,9 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> std::result::Result<Dynam
         copy_texture
     };
 
-    let subresource_size = ResourceSize { 
+    let subresource_size = ResourceSize {
         width: (rect.right - rect.left) as u32,
-        height: (rect.bottom - rect.top) as u32
+        height: (rect.bottom - rect.top) as u32,
     };
 
     println!("{:?}", subresource_size);
@@ -238,9 +253,15 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> std::result::Result<Dynam
             )
         };
 
+        let title_bar_height = {   
+            GetSystemMetrics(SM_CYCAPTION)
+            + GetSystemMetrics(SM_CYFRAME)
+            + GetSystemMetrics(SM_CXPADDEDBORDER) 
+        } as u32;
+
         let bytes_per_pixel = 4;
         let mut bits = vec![0u8; (subresource_size.width * desc.Height * bytes_per_pixel) as usize];
-        for row in 0..subresource_size.height {
+        for row in title_bar_height..subresource_size.height {
             let data_begin = (row * (subresource_size.width * bytes_per_pixel)) as usize;
             let data_end = ((row + 1) * (subresource_size.width * bytes_per_pixel)) as usize;
 
@@ -259,6 +280,6 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> std::result::Result<Dynam
 
     match create_dynamic_image(bits, subresource_size) {
         Ok(image) => Ok(image),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }

@@ -18,8 +18,8 @@ pub fn get_image(path: &str) -> Result<Image, String> {
     match ImageReader::open(path) {
         Ok(res) => {
             let img = res.decode().unwrap();
-            return Ok(Image::from_dynamic_image(&img).unwrap()) 
-        },
+            return Ok(Image::from_dynamic_image(&img).unwrap());
+        }
         Err(err) => {
             return Err(format!("{:?}", err));
         }

@@ -1,4 +1,4 @@
-use reqwest::{self, Client, Request, Response, Method, Error, dns::Resolving};
+use reqwest::{self, dns::Resolving, Client, Error, Method, Request, Response};
 use serde::{Deserialize, Serialize};
 use std::env;
 
@@ -35,25 +35,23 @@ impl DeepL {
     }
 
     fn request_handler(
-        &self, 
+        &self,
         method: Method,
-        endpoint: &str, 
-        params: Option<&[(&str, &str)]>
+        endpoint: &str,
+        params: Option<&[(&str, &str)]>,
     ) -> Result<reqwest::blocking::Response, reqwest::Error> {
         let client = reqwest::blocking::Client::new();
         let base_url = "https://api-free.deepl.com/v2";
         let url = format!("{}{}", base_url, endpoint);
-        let request = client.request(method.clone(), url).header("Authorization", format!("DeepL-Auth-Key {}", self.auth_key));
-        
+        let request = client
+            .request(method.clone(), url)
+            .header("Authorization", format!("DeepL-Auth-Key {}", self.auth_key));
+
         let response = match params {
-            Some(params) => {
-                match method {
-                    Method::GET => request.query(params).send(),
-                    Method::PATCH | Method::POST | Method::PUT => {
-                        request.form(params).send()
-                    },
-                    _ => unreachable!("Only GET, PATCH, POST and PUT are supported with params."),
-                }
+            Some(params) => match method {
+                Method::GET => request.query(params).send(),
+                Method::PATCH | Method::POST | Method::PUT => request.form(params).send(),
+                _ => unreachable!("Only GET, PATCH, POST and PUT are supported with params."),
             },
             None => request.send(),
         };
@@ -62,7 +60,7 @@ impl DeepL {
             Ok(response) if response.status().is_success() => {
                 println!("Successful API request");
                 response
-            },
+            }
             Ok(response) if response.status() == reqwest::StatusCode::UNAUTHORIZED => {
                 println!("Unauthorized request");
                 response.error_for_status()?
@@ -73,7 +71,7 @@ impl DeepL {
             Ok(response) if response.status() == reqwest::StatusCode::NOT_FOUND => {
                 response.error_for_status()?
             }
-            Ok(response) => response,  
+            Ok(response) => response,
             Err(e) => {
                 panic!("{:?}", e);
             }
@@ -83,10 +81,7 @@ impl DeepL {
     }
 
     pub fn translate_text(&self, text: &str, target_lang: &str) -> Result<String, reqwest::Error> {
-        let query = vec![
-            ("target_lang", target_lang),
-            ("text", text)
-        ];
+        let query = vec![("target_lang", target_lang), ("text", text)];
 
         let response = self.request_handler(Method::POST, "/translate", Some(&query))?;
 
@@ -123,9 +118,9 @@ impl DeepL {
 
 #[cfg(test)]
 mod tests {
+    use crate::DeepL;
     use dotenv::dotenv;
     use std::env;
-    use crate::DeepL; 
 
     fn translator() -> DeepL {
         dotenv().ok();
@@ -139,10 +134,13 @@ mod tests {
     fn basic_translation() {
         let text: &str = "This is a basic sentence I want to translate.";
         match translator().translate_text(text, "DE") {
-            Ok(translated_text) =>  {
-                assert_eq!(translated_text, "Dies ist ein einfacher Satz, den ich übersetzen möchte.")
-            },
-            Err(e) => panic!("Failed to translated text: {:?}", e)
+            Ok(translated_text) => {
+                assert_eq!(
+                    translated_text,
+                    "Dies ist ein einfacher Satz, den ich übersetzen möchte."
+                )
+            }
+            Err(e) => panic!("Failed to translated text: {:?}", e),
         }
     }
 
@@ -151,8 +149,8 @@ mod tests {
         match translator().get_supported() {
             Ok(supported_langs) => {
                 assert!(!supported_langs.is_empty())
-            }, 
-            Err(e) => panic!("Failed to get supported langs: {:?}", e) 
+            }
+            Err(e) => panic!("Failed to get supported langs: {:?}", e),
         }
     }
 }

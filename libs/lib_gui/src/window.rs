@@ -13,9 +13,9 @@ use std::fs::File;
 use std::hash::Hash;
 use std::io::prelude::*;
 use std::thread;
+use std::time::{Duration, Instant};
 use tokio::runtime;
 use tokio::runtime::Runtime;
-use std::time::{Duration, Instant};
 
 pub struct WindowLayout {
     pub width: i32,
@@ -69,7 +69,7 @@ fn take_sc_nosave() -> String {
     match image_handler.join() {
         Ok(res) => {
             return lib_ocr::run_ocr_img(&res);
-        },
+        }
         Err(_) => panic!("Error"),
     }
 }
@@ -88,10 +88,7 @@ fn get_target_langs(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> 
         .collect::<HashMap<String, MenuItem>>()
 }
 
-fn get_lang_dropdown(
-    lang_choice: &Label,
-    lang_choices: HashMap<String, MenuItem>,
-) -> Menu {
+fn get_lang_dropdown(lang_choice: &Label, lang_choices: HashMap<String, MenuItem>) -> Menu {
     let lang_menu = Menu::new();
     for (lang_code_str, lang_choice_item) in lang_choices {
         lang_menu.append(&lang_choice_item);

@@ -19,11 +19,11 @@ pub fn run_ocr(path: &str, lang: &str) -> String {
                     ..Default::default()
                 }),
             ));
-        },
+        }
         Err(err_msg) => {
             return err_msg;
         }
-    }; 
+    };
 }
 
 pub fn run_ocr_img(img: &DynamicImage) -> String {
@@ -41,17 +41,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn basic_ocr_example() {
-
-    }
+    fn basic_ocr_example() {}
 
     #[test]
-    fn get_tesseract_supported() {
-
-    }
+    fn get_tesseract_supported() {}
 
     #[test]
-    fn advanced_ocr_example() {
-        
-    }
+    fn advanced_ocr_example() {}
 }
