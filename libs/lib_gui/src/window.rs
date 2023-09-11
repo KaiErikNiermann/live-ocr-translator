@@ -2,6 +2,7 @@ use gtk::ffi::gtk_widget_set_visible;
 use gtk::glib::{Receiver, Sender};
 use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
+use lib_ocr::text::clean_text;
 use lib_ocr::win_sc::*;
 use lib_translator;
 use lib_translator::Language;
@@ -14,6 +15,7 @@ use std::io::prelude::*;
 use std::thread;
 use tokio::runtime;
 use tokio::runtime::Runtime;
+use std::time::{Duration, Instant};
 
 pub struct WindowLayout {
     pub width: i32,
@@ -53,6 +55,22 @@ fn take_sc() {
     match image_handler.join() {
         Ok(res) => println!("{:?}", res),
         Err(_) => println!("Error"),
+    }
+}
+
+// #[cfg(target_os = "windows")]
+fn take_sc_nosave() -> String {
+    let image_handler = thread::spawn(|| {
+        monitor::monitor_sc(Some(&window::get_window_rect(window::window_handle(
+            "translator",
+        ))))
+    });
+
+    match image_handler.join() {
+        Ok(res) => {
+            return lib_ocr::run_ocr_img(&res);
+        },
+        Err(_) => panic!("Error"),
     }
 }
 
@@ -250,15 +268,17 @@ fn add_actions(
         glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label => move |_| {
             tbox.set_opacity(0.0);
 
-            take_sc();
-
+            // take_sc();
+            let start = Instant::now();
+            
             let from_lang = source_lang_choice.text();
             let to_lang = target_lang_choice.text();
 
             #[cfg(target_os = "windows")]
-            let text = lib_ocr::run_ocr("./screenshot.png", &from_lang);
-
+            let text = take_sc_nosave();
+            
             #[cfg(target_os = "linux")]
+            
             let text = lib_ocr::run_ocr("./assets/placeholder_de.png", &from_lang);
             
             let api_key = api_key_label.text().to_string();
@@ -268,6 +288,9 @@ fn add_actions(
                 Ok(text) => text,
                 Err(_) => String::from("Could not translate")
             };
+
+            let duration = start.elapsed();
+            println!("duration : {:?}", duration);
 
             label.set_text(&translated_text);
             label.set_line_wrap(true);

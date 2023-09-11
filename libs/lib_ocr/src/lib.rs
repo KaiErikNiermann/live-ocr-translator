@@ -1,3 +1,6 @@
+use ::image::DynamicImage;
+use rusty_tesseract::{Args, Image};
+
 pub mod image;
 pub mod text;
 pub mod win_sc;
@@ -21,6 +24,16 @@ pub fn run_ocr(path: &str, lang: &str) -> String {
             return err_msg;
         }
     }; 
+}
+
+pub fn run_ocr_img(img: &DynamicImage) -> String {
+    return text::clean_text(&image::text_from_image(
+        &(Image::from_dynamic_image(&img).unwrap()),
+        &(rusty_tesseract::Args {
+            lang: String::from("eng"),
+            ..Default::default()
+        }),
+    ));
 }
 
 #[cfg(test)]

@@ -1,4 +1,7 @@
+extern crate image;
+use image::{DynamicImage, ImageBuffer, Pixel, Rgba};
 use std::sync::mpsc::channel;
+use rusty_tesseract::Image;
 use windows::core::ComInterface;
 use windows::core::{IInspectable, Result, HSTRING};
 use windows::Foundation::TypedEventHandler;
@@ -19,6 +22,8 @@ use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows::Win32::System::WinRT::{
     Graphics::Capture::IGraphicsCaptureItemInterop, RoInitialize, RO_INIT_MULTITHREADED,
 };
+
+use crate::text;
 
 pub mod devices;
 pub mod monitor;
@@ -42,6 +47,35 @@ struct ResourceSize {
     height: u32
 }
 
+fn create_dynamic_image(bits: Vec<u8>, resource_size: ResourceSize) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
+    // Create a new RGBA image with the given dimensions
+    let mut img = ImageBuffer::new(resource_size.width, resource_size.height);
+
+    // Iterate through the bits and set the pixel data in the image
+    for (x, y, pixel) in img.enumerate_pixels_mut() {
+        let offset = (y * resource_size.width + x) as usize * 4; // 4 channels (R, G, B, A)
+        if offset + 3 < bits.len() {
+            let rgba = Rgba([
+                bits[offset],      // Red
+                bits[offset + 1],  // Green
+                bits[offset + 2],  // Blue
+                bits[offset + 3],  // Alpha
+            ]);
+            *pixel = rgba;
+        }
+    }
+
+    // Convert the ImageBuffer to a DynamicImage
+    let dynamic_image = DynamicImage::ImageRgba8(img);
+
+    println!("DYNAMIC IMAGE TESTS {}", text::clean_text(&crate::image::text_from_image(&Image::from_dynamic_image(&dynamic_image).unwrap(), &(rusty_tesseract::Args {
+        lang: String::from("eng"),
+        ..Default::default()
+    }))));
+
+    Ok(dynamic_image)
+}
+
 // The target of the capture, chosen with the picker control.
 fn create_capture_item(handle: Handle) -> Result<GraphicsCaptureItem> {
     let interop = windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
@@ -51,7 +85,7 @@ fn create_capture_item(handle: Handle) -> Result<GraphicsCaptureItem> {
     }
 }
 
-fn save_as_image(bits: Vec<u8>, resource_size: ResourceSize) -> Result<()> {
+fn save_as_image(bits: &Vec<u8>, resource_size: &ResourceSize) -> Result<()> {
     // Create a file in the current directory
     let path = std::env::current_dir()
         .unwrap()
@@ -96,7 +130,7 @@ fn init() {
     }
 }
 
-fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> Result<()> {
+fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
     // The size of the target of the capture.
     let item_size = item.Size()?;
     println!("item_size: {:?}", item_size);
@@ -221,7 +255,10 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> Result<()> {
         bits
     };
 
-    save_as_image(bits, subresource_size)?;
+    // save_as_image(&bits, &subresource_size)?;
 
-    Ok(())
+    match create_dynamic_image(bits, subresource_size) {
+        Ok(image) => Ok(image),
+        Err(e) => Err(e)
+    }
 }

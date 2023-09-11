@@ -1004,6 +1004,7 @@ version = "0.1.0"
 dependencies = [
  "glib 0.18.1",
  "gtk",
+ "image",
  "lib_ocr",
  "lib_translator",
  "serde",
