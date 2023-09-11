@@ -21,8 +21,10 @@ jobs:
               run: sudo apt-get install libgtk-3-dev 
 
             - name: Setup .env file
-              run: echo "DEEPL_API_KEY={{ secrets.DEEPL_API_KEY }}" >> .env
+              run: | 
+                ls -a -l
+                echo "DEEPL_API_KEY={{ secrets.DEEPL_API_KEY }}" >> .env
 
-            - name: Run tests before compiling
+            - name: Run tests
               run: cargo test --all
 
