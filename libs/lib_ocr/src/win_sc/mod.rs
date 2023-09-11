@@ -36,6 +36,12 @@ pub struct WindowRect {
     pub bottom: i32,
 }
 
+#[derive(Debug)]
+struct ResourceSize {
+    width: u32,
+    height: u32
+}
+
 // The target of the capture, chosen with the picker control.
 fn create_capture_item(handle: Handle) -> Result<GraphicsCaptureItem> {
     let interop = windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
@@ -45,7 +51,7 @@ fn create_capture_item(handle: Handle) -> Result<GraphicsCaptureItem> {
     }
 }
 
-fn save_as_image(bits: Vec<u8>, item_size: SizeInt32) -> Result<()> {
+fn save_as_image(bits: Vec<u8>, resource_size: ResourceSize) -> Result<()> {
     // Create a file in the current directory
     let path = std::env::current_dir()
         .unwrap()
@@ -68,8 +74,8 @@ fn save_as_image(bits: Vec<u8>, item_size: SizeInt32) -> Result<()> {
     encoder.SetPixelData(
         BitmapPixelFormat::Bgra8,
         BitmapAlphaMode::Premultiplied,
-        item_size.Width as u32,
-        item_size.Height as u32,
+        resource_size.width,
+        resource_size.height,
         1.0,
         1.0,
         &bits,
@@ -94,6 +100,7 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> Result<()> {
     // The size of the target of the capture.
     let item_size = item.Size()?;
     println!("item_size: {:?}", item_size);
+    println!("Compiled new");
 
     // Create a D3D11 device
     let d3d_device = devices::create_d3d_device()?;
@@ -168,6 +175,13 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> Result<()> {
         copy_texture
     };
 
+    let subresource_size = ResourceSize { 
+        width: (rect.right - rect.left) as u32,
+        height: (rect.bottom - rect.top) as u32
+    };
+
+    println!("{:?}", subresource_size);
+
     let bits = unsafe {
         let mut desc = D3D11_TEXTURE2D_DESC::default();
         texture.GetDesc(&mut desc as *mut _);
@@ -191,13 +205,13 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> Result<()> {
         };
 
         let bytes_per_pixel = 4;
-        let mut bits = vec![0u8; (desc.Width * desc.Height * bytes_per_pixel) as usize];
-        for row in 0..desc.Height {
-            let data_begin = (row * (desc.Width * bytes_per_pixel)) as usize;
-            let data_end = ((row + 1) * (desc.Width * bytes_per_pixel)) as usize;
+        let mut bits = vec![0u8; (subresource_size.width * desc.Height * bytes_per_pixel) as usize];
+        for row in 0..subresource_size.height {
+            let data_begin = (row * (subresource_size.width * bytes_per_pixel)) as usize;
+            let data_end = ((row + 1) * (subresource_size.width * bytes_per_pixel)) as usize;
 
             let slice_begin = (row * mapped.RowPitch) as usize;
-            let slice_end = slice_begin + (desc.Width * bytes_per_pixel) as usize;
+            let slice_end = slice_begin + (subresource_size.width * bytes_per_pixel) as usize;
 
             bits[data_begin..data_end].copy_from_slice(&slice[slice_begin..slice_end]);
         }
@@ -207,7 +221,7 @@ fn take_sc(item: &GraphicsCaptureItem, rect: &RECT) -> Result<()> {
         bits
     };
 
-    save_as_image(bits, item_size)?;
+    save_as_image(bits, subresource_size)?;
 
     Ok(())
 }

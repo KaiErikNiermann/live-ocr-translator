@@ -3,7 +3,6 @@ use rusty_tesseract::{Args, Image};
 use std::env;
 
 pub fn get_image(path: &str) -> Result<Image, String> {
-    // print cwd
     if let Ok(current_dir) = env::current_dir() {
         if let Some(dir_str) = current_dir.to_str() {
             println!("Current Working Directory: {}", dir_str);
@@ -14,7 +13,6 @@ pub fn get_image(path: &str) -> Result<Image, String> {
         println!("Unable to retrieve current directory.");
     }
 
-    // concat cwd with path
     let path = format!("{}/{}", env::current_dir().unwrap().to_str().unwrap(), path);
 
     match ImageReader::open(path) {

@@ -1,3 +1,5 @@
+use gtk::ffi::gtk_widget_set_visible;
+use gtk::glib::{Receiver, Sender};
 use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
 use lib_ocr::win_sc::*;
@@ -7,7 +9,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::prelude::*;
+use std::thread;
+use tokio::runtime;
+use tokio::runtime::Runtime;
 
 pub struct WindowLayout {
     pub width: i32,
