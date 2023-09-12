@@ -74,17 +74,6 @@ fn create_dynamic_image(
     // Convert the ImageBuffer to a DynamicImage
     let dynamic_image = DynamicImage::ImageRgba8(img);
 
-    println!(
-        "DYNAMIC IMAGE TESTS {}",
-        text::clean_text(&crate::image::text_from_image(
-            &Image::from_dynamic_image(&dynamic_image).unwrap(),
-            &(rusty_tesseract::Args {
-                lang: String::from("eng"),
-                ..Default::default()
-            })
-        ))
-    );
-
     Ok(dynamic_image)
 }
 

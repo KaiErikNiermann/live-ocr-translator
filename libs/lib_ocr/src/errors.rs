@@ -1,10 +1,6 @@
 use rusty_tesseract::TessError;
-use rusty_tesseract::image::DynamicImage;
 use thiserror::Error;
-use std::error;
-use std::error::Error;
-use std::num::ParseIntError;
-use std::fmt::{self, Display};
+use std::{fmt::{self, Display}, error::Error};
 
 #[derive(Error, Debug)]
 pub struct TessErrWrapper {
@@ -17,13 +13,23 @@ pub enum OCRError {
     OCRTessErr(#[from] TessErrWrapper),
 
     #[error("There was a problem saving the image to your disk")]
-    OCRioErr(#[from] std::io::error)
+    OCRioErr(#[from] std::io::Error ),
 }
 
-impl Display::fmt for TessErrWrapper {
+pub fn err_to_string(e: OCRError) -> String {
+    match e.source() {
+        Some(source) => {
+            format!("Error: {}\n    Caused by: {}", e, source)
+        },
+        None => format!("Error: {}\n", e)
+    }
+}
+
+impl fmt::Display for TessErrWrapper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TessErrWrapper => write(f, "{}", TessErrWrapper.error.to_string())
+            tess_err => 
+                write!(f, "{}", tess_err.error.to_string())
         }
     }
 }
@@ -31,10 +37,6 @@ impl Display::fmt for TessErrWrapper {
 impl From<TessError> for OCRError {
     fn from(err: TessError) -> OCRError {
         OCRError::OCRTessErr(TessErrWrapper { error: err })
-    }
-
-    fn from(err: std::io::Error) {
-        OCRError::OCRioErr(err)
     }
 }
 

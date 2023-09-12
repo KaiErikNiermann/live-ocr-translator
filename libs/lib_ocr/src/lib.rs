@@ -1,39 +1,37 @@
+use errors::TessErrWrapper;
 use ::image::DynamicImage;
 use rusty_tesseract::{Args, Image};
 
 pub mod image;
 pub mod text;
 pub mod win_sc;
+pub mod errors;
 
 pub fn get_tesseract_supported() -> Vec<String> {
     rusty_tesseract::get_tesseract_langs().unwrap()
 }
 
-pub fn run_ocr(path: &str, lang: &str) -> String {
+pub fn run_ocr(path: &str, lang: &str) -> errors::Result<String> {
     match image::get_image(path) {
-        Ok(img) => {
-            return text::clean_text(&image::text_from_image(
-                &img,
-                &(rusty_tesseract::Args {
-                    lang: String::from(lang),
-                    ..Default::default()
-                }),
-            ));
-        }
-        Err(err_msg) => {
-            return err_msg;
-        }
-    };
+        Ok(img) => ocr_img(&img, lang),
+        Err(err_msg) => Err(err_msg)
+    }
 }
 
-pub fn run_ocr_img(img: &DynamicImage) -> String {
-    return text::clean_text(&image::text_from_image(
-        &(Image::from_dynamic_image(&img).unwrap()),
-        &(rusty_tesseract::Args {
-            lang: String::from("eng"),
-            ..Default::default()
-        }),
-    ));
+fn ocr_img(img: &Image, lang: &str) -> errors::Result<String> {
+    let raw_text = image::text_from_image(&img, &(rusty_tesseract::Args {
+        lang: String::from(lang),
+        ..Default::default()
+    }))?;
+
+    return Ok(text::clean_text(&raw_text));
+}
+
+pub fn run_ocr_img(img: &DynamicImage, lang: &str) -> errors::Result<String> {
+    match Image::from_dynamic_image(img) {
+        Ok(image) => ocr_img(&image, lang),
+        Err(e) => Err(errors::OCRError::OCRTessErr(TessErrWrapper { error: e }))
+    }
 }
 
 #[cfg(test)]

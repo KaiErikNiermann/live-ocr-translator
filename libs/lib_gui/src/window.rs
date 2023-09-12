@@ -58,7 +58,7 @@ fn take_sc() {
     }
 }
 
-// #[cfg(target_os = "windows")]
+#[cfg(target_os = "windows")]
 fn take_sc_nosave() -> String {
     let image_handler = thread::spawn(|| {
         monitor::monitor_sc(Some(&window::get_window_rect(window::window_handle(
@@ -68,9 +68,12 @@ fn take_sc_nosave() -> String {
 
     match image_handler.join() {
         Ok(res) => {
-            return lib_ocr::run_ocr_img(&res);
+            match lib_ocr::run_ocr_img(&res, "eng") {
+                Ok(text) => text, 
+                Err(e) => lib_ocr::errors::err_to_string(e)
+            }
         }
-        Err(_) => panic!("Error"),
+        Err(_) => String::from("Some unkown error occured"),
     }
 }
 
@@ -275,7 +278,10 @@ fn add_actions(
             let text = take_sc_nosave();
             
             #[cfg(target_os = "linux")]
-            let text = lib_ocr::run_ocr("./assets/placeholder_de.png", &from_lang);
+            let text = match lib_ocr::run_ocr("./assets/placeholder_de.png", &from_lang) {
+                Ok(text) => text,
+                Err(e) => lib_ocr::errors::err_to_string(e)
+            };
             
             let api_key = api_key_label.text().to_string();
             let deepl = lib_translator::DeepL::new(api_key);

@@ -1016,8 +1016,11 @@ dependencies = [
 name = "lib_ocr"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "backtrace",
  "image",
  "rusty-tesseract",
+ "thiserror",
  "winapi",
  "windows",
  "windows-sys",
