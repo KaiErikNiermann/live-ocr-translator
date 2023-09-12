@@ -67,12 +67,10 @@ fn take_sc_nosave() -> String {
     });
 
     match image_handler.join() {
-        Ok(res) => {
-            match lib_ocr::run_ocr_img(&res, "eng") {
-                Ok(text) => text, 
-                Err(e) => lib_ocr::errors::err_to_string(e)
-            }
-        }
+        Ok(res) => match lib_ocr::run_ocr_img(&res, "eng") {
+            Ok(text) => text,
+            Err(e) => lib_ocr::errors::err_to_string(e),
+        },
         Err(_) => String::from("Some unkown error occured"),
     }
 }

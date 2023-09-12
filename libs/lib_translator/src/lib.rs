@@ -2,6 +2,8 @@ use reqwest::{self, dns::Resolving, Client, Error, Method, Request, Response};
 use serde::{Deserialize, Serialize};
 use std::env;
 
+pub mod errors;
+
 #[derive(Serialize, Deserialize, Debug)]
 struct TranslationResponseBody {
     detected_source_language: String,

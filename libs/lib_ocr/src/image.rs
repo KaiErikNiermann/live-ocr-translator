@@ -14,12 +14,10 @@ pub fn get_image(path: &str) -> errors::Result<Image> {
 
             match Image::from_dynamic_image(&dynimg) {
                 Ok(image) => Ok(image),
-                Err(e) => Err(OCRError::OCRTessErr(TessErrWrapper { error: e }))
+                Err(e) => Err(OCRError::OCRTessErr(TessErrWrapper { error: e })),
             }
         }
-        Err(err) => {
-            Err(OCRError::OCRioErr(err))
-        }
+        Err(err) => Err(OCRError::OCRioErr(err)),
     }
 }
 

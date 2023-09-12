@@ -29,12 +29,18 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use crate::text;
 
 pub mod devices;
+pub mod error;
 pub mod monitor;
 pub mod window;
 
 enum Handle {
     HWND(HWND),
     HMONITOR(HMONITOR),
+}
+
+enum ImageMode {
+    Save,
+    NoSave
 }
 
 pub struct WindowRect {
@@ -50,22 +56,25 @@ struct ResourceSize {
     height: u32,
 }
 
-fn create_dynamic_image(
+#[derive(Debug)]
+struct ImageResource {
     bits: Vec<u8>,
-    resource_size: ResourceSize,
-) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
-    // Create a new RGBA image with the given dimensions
-    let mut img = ImageBuffer::new(resource_size.width, resource_size.height);
+    size: ResourceSize,
+}
 
-    // Iterate through the bits and set the pixel data in the image
+fn create_dynamic_image(
+    image_scr: &ImageResource,
+) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
+    let mut img = ImageBuffer::new(image_scr.size.width, image_scr.size.height);
+
     for (x, y, pixel) in img.enumerate_pixels_mut() {
-        let offset = (y * resource_size.width + x) as usize * 4; // 4 channels (R, G, B, A)
-        if offset + 3 < bits.len() {
+        let offset = (y * image_scr.size.width + x) as usize * 4; // 4 channels (R, G, B, A)
+        if offset + 3 < image_scr.bits.len() {
             let rgba = Rgba([
-                bits[offset],     // Red
-                bits[offset + 1], // Green
-                bits[offset + 2], // Blue
-                bits[offset + 3], // Alpha
+                image_scr.bits[offset],     // Red
+                image_scr.bits[offset + 1], // Green
+                image_scr.bits[offset + 2], // Blue
+                image_scr.bits[offset + 3], // Alpha
             ]);
             *pixel = rgba;
         }
@@ -81,12 +90,14 @@ fn create_dynamic_image(
 fn create_capture_item(handle: Handle) -> Result<GraphicsCaptureItem> {
     let interop = windows::core::factory::<GraphicsCaptureItem, IGraphicsCaptureItemInterop>()?;
     match handle {
-        Handle::HWND(window_handle) => unsafe { interop.CreateForWindow(window_handle) },
-        Handle::HMONITOR(monitor_handle) => unsafe { interop.CreateForMonitor(monitor_handle) },
+        Handle::HWND(window_handle) => 
+            unsafe { interop.CreateForWindow(window_handle) },
+        Handle::HMONITOR(monitor_handle) => 
+            unsafe { interop.CreateForMonitor(monitor_handle) },
     }
 }
 
-fn save_as_image(bits: &Vec<u8>, resource_size: &ResourceSize) -> Result<()> {
+fn save_as_image(img: &ImageResource) -> Result<()> {
     // Create a file in the current directory
     let path = std::env::current_dir()
         .unwrap()
@@ -109,11 +120,11 @@ fn save_as_image(bits: &Vec<u8>, resource_size: &ResourceSize) -> Result<()> {
     encoder.SetPixelData(
         BitmapPixelFormat::Bgra8,
         BitmapAlphaMode::Premultiplied,
-        resource_size.width,
-        resource_size.height,
+        img.size.width,
+        img.size.height,
         1.0,
         1.0,
-        &bits,
+        &img.bits,
     )?;
 
     encoder.FlushAsync()?.get()?;
@@ -242,10 +253,10 @@ fn take_sc(
             )
         };
 
-        let title_bar_height = {   
+        let title_bar_height = {
             GetSystemMetrics(SM_CYCAPTION)
-            + GetSystemMetrics(SM_CYFRAME)
-            + GetSystemMetrics(SM_CXPADDEDBORDER) 
+                + GetSystemMetrics(SM_CYFRAME)
+                + GetSystemMetrics(SM_CXPADDEDBORDER)
         } as u32;
 
         let bytes_per_pixel = 4;
@@ -267,7 +278,10 @@ fn take_sc(
 
     // save_as_image(&bits, &subresource_size)?;
 
-    match create_dynamic_image(bits, subresource_size) {
+    match create_dynamic_image(&ImageResource {
+        bits: bits,
+        size: subresource_size,
+    }) {
         Ok(image) => Ok(image),
         Err(e) => Err(e),
     }
