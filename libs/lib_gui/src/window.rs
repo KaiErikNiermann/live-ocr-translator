@@ -275,7 +275,6 @@ fn add_actions(
             let text = take_sc_nosave();
             
             #[cfg(target_os = "linux")]
-            
             let text = lib_ocr::run_ocr("./assets/placeholder_de.png", &from_lang);
             
             let api_key = api_key_label.text().to_string();
