@@ -1,6 +1,6 @@
 extern crate image;
-use image::{DynamicImage, ImageBuffer, Pixel, Rgba};
-use rusty_tesseract::Image;
+use error::WindowsCaptureError;
+use image::{DynamicImage, ImageBuffer, Pixel, Rgba, io::Reader as ImageReader};
 use std::sync::mpsc::channel;
 use windows::core::ComInterface;
 use windows::core::{IInspectable, Result, HSTRING};
@@ -25,8 +25,7 @@ use windows::Win32::System::WinRT::{
 use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, SM_CXPADDEDBORDER, SM_CYCAPTION, SM_CYFRAME,
 };
-
-use crate::text;
+use std::env;
 
 pub mod devices;
 pub mod error;
@@ -38,7 +37,7 @@ enum Handle {
     HMONITOR(HMONITOR),
 }
 
-enum ImageMode {
+pub enum ImageMode {
     Save,
     NoSave
 }
@@ -50,21 +49,21 @@ pub struct WindowRect {
     pub bottom: i32,
 }
 
-#[derive(Debug)]
-struct ResourceSize {
-    width: u32,
-    height: u32,
+#[derive(Debug, PartialEq, Eq)]
+pub struct ResourceSize {
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug)]
-struct ImageResource {
-    bits: Vec<u8>,
-    size: ResourceSize,
+pub struct ImageResource {
+    pub bits: Vec<u8>,
+    pub size: ResourceSize,
 }
 
-fn create_dynamic_image(
+pub fn create_dynamic_image(
     image_scr: &ImageResource,
-) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
+) -> error::Result<DynamicImage> {
     let mut img = ImageBuffer::new(image_scr.size.width, image_scr.size.height);
 
     for (x, y, pixel) in img.enumerate_pixels_mut() {
@@ -97,7 +96,7 @@ fn create_capture_item(handle: Handle) -> Result<GraphicsCaptureItem> {
     }
 }
 
-fn save_as_image(img: &ImageResource) -> Result<()> {
+pub fn save_as_image(img: &ImageResource) -> error::Result<DynamicImage> {
     // Create a file in the current directory
     let path = std::env::current_dir()
         .unwrap()
@@ -129,7 +128,12 @@ fn save_as_image(img: &ImageResource) -> Result<()> {
 
     encoder.FlushAsync()?.get()?;
 
-    Ok(())
+    let saved_to_path = format!("{}/{}", path, "screenshot.png");
+
+    match ImageReader::open(saved_to_path) {
+        Ok(image) => Ok(image.decode().unwrap()), 
+        Err(e) => Err(WindowsCaptureError::ImageSaveFailedErr(e))
+    }
 }
 
 fn init() {
@@ -144,12 +148,10 @@ fn init() {
 
 fn take_sc(
     item: &GraphicsCaptureItem,
-    rect: &RECT,
-) -> std::result::Result<DynamicImage, Box<dyn std::error::Error>> {
+    rect: &RECT
+) -> error::Result<ImageResource> {
     // The size of the target of the capture.
     let item_size = item.Size()?;
-    println!("item_size: {:?}", item_size);
-    println!("Compiled new");
 
     // Create a D3D11 device
     let d3d_device = devices::create_d3d_device()?;
@@ -253,11 +255,15 @@ fn take_sc(
             )
         };
 
-        let title_bar_height = {
+        let mut title_bar_height = {
             GetSystemMetrics(SM_CYCAPTION)
                 + GetSystemMetrics(SM_CYFRAME)
                 + GetSystemMetrics(SM_CXPADDEDBORDER)
         } as u32;
+
+        if (rect.bottom == item_size.Height as i32 && rect.right == item_size.Width as i32) {
+            title_bar_height = 0;
+        }
 
         let bytes_per_pixel = 4;
         let mut bits = vec![0u8; (subresource_size.width * desc.Height * bytes_per_pixel) as usize];
@@ -276,13 +282,17 @@ fn take_sc(
         bits
     };
 
-    // save_as_image(&bits, &subresource_size)?;
 
-    match create_dynamic_image(&ImageResource {
-        bits: bits,
-        size: subresource_size,
-    }) {
-        Ok(image) => Ok(image),
-        Err(e) => Err(e),
-    }
+    // match mode {
+    //     ImageMode::Save => save_as_image(&ImageResource {
+    //         bits: bits,
+    //         size: subresource_size,
+    //     }),
+    //     ImageMode::NoSave => create_dynamic_image(&ImageResource {
+    //         bits: bits,
+    //         size: subresource_size,
+    //     })
+    // }
+
+    Ok(ImageResource { bits: bits, size: subresource_size })
 }

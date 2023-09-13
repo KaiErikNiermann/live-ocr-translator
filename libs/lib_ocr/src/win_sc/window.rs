@@ -1,11 +1,14 @@
-use crate::win_sc::{create_capture_item, init, take_sc, Handle, WindowRect};
+use crate::win_sc::{create_capture_item, init, take_sc, Handle, WindowRect, error};
 use std::{ffi::c_void, mem::size_of, ptr::null_mut};
+use image::DynamicImage;
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::Graphics::Dwm::DwmGetWindowAttribute;
 use windows::Win32::Graphics::Dwm::DWMWA_EXTENDED_FRAME_BOUNDS;
 use windows_sys::Win32::UI::*;
 
-pub fn window_handle(window_title: &str) -> HWND {
+use super::{ImageMode, ImageResource};
+
+pub fn window_handle(window_title: &str) -> error::Result<HWND> {
     init();
     let window_name: String = String::from(window_title) + "\0";
     return unsafe {
@@ -13,8 +16,8 @@ pub fn window_handle(window_title: &str) -> HWND {
             null_mut(),
             window_name.as_ptr(),
         )) {
-            HWND(0) => panic!("Failed to find window"),
-            handle => handle,
+            HWND(0) => Err(error::WindowsCaptureError::WindowNotFoundErr),
+            handle => Ok(handle),
         }
     };
 }
@@ -44,8 +47,8 @@ pub fn get_window_rect(window_handle: HWND) -> RECT {
     rect
 }
 
-pub fn window_sc(window_title: &str, rect: Option<&WindowRect>) {
-    let window_handle = window_handle(window_title);
+pub fn window_sc(window_title: &str, rect: Option<&WindowRect>) -> error::Result<ImageResource> {
+    let window_handle = window_handle(window_title)?;
 
     let capture_rect = match rect {
         Some(window_rect) => RECT {
@@ -55,15 +58,11 @@ pub fn window_sc(window_title: &str, rect: Option<&WindowRect>) {
             bottom: window_rect.bottom,
         },
         None => {
-            let rect = get_window_rect(window_handle);
-            rect
+            get_window_rect(window_handle)
         }
     };
 
     let window_capture_item = create_capture_item(Handle::HWND(window_handle)).unwrap();
 
-    match take_sc(&window_capture_item, &capture_rect) {
-        Ok(_) => println!("Screenshot taken"),
-        Err(error) => println!("Failed to take screenshot: {:?}", error),
-    };
+    take_sc(&window_capture_item, &capture_rect)
 }

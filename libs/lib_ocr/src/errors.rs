@@ -19,7 +19,7 @@ pub enum OCRError {
     OCRioErr(#[from] std::io::Error),
 }
 
-pub fn err_to_string(e: OCRError) -> String {
+pub fn err_to_string(e: &OCRError) -> String {
     match e.source() {
         Some(source) => {
             format!("Error: {}\n    Caused by: {}", e, source)

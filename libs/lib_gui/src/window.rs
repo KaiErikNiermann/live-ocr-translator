@@ -3,10 +3,11 @@ use gtk::glib::{Receiver, Sender};
 use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
 use lib_ocr::text::clean_text;
-use lib_ocr::win_sc::*;
+use lib_ocr::{win_sc::*, run_ocr_img};
 use lib_translator;
 use lib_translator::Language;
 use serde::{Deserialize, Serialize};
+use image::DynamicImage;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
@@ -16,6 +17,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tokio::runtime;
 use tokio::runtime::Runtime;
+
+#[cfg(target_os = "windows")]
+use lib_ocr::win_sc;
 
 pub struct WindowLayout {
     pub width: i32,
@@ -45,35 +49,26 @@ fn take_sc() {
 }
 
 #[cfg(target_os = "windows")]
-fn take_sc() {
-    let image_handler = thread::spawn(|| {
-        monitor::monitor_sc(Some(&window::get_window_rect(window::window_handle(
-            "translator",
-        ))));
+fn take_sc(mode: &ImageMode) -> win_sc::error::Result<DynamicImage> {
+    let image_handler = thread::spawn(move || { // Use move to transfer ownership of mode_clone
+        let window_handle = window::window_handle("translator")?;
+        monitor::monitor_sc(Some(&window::get_window_rect(window_handle)))
     });
 
-    match image_handler.join() {
-        Ok(res) => println!("{:?}", res),
-        Err(_) => println!("Error"),
+    let img_resource = image_handler.join().unwrap()?;
+
+    match mode {
+        ImageMode::Save => win_sc::save_as_image(&ImageResource {
+            bits: img_resource.bits,
+            size: img_resource.size,
+        }),
+        ImageMode::NoSave => win_sc::create_dynamic_image(&ImageResource {
+            bits: img_resource.bits,
+            size: img_resource.size,
+        })
     }
 }
 
-#[cfg(target_os = "windows")]
-fn take_sc_nosave() -> String {
-    let image_handler = thread::spawn(|| {
-        monitor::monitor_sc(Some(&window::get_window_rect(window::window_handle(
-            "translator",
-        ))))
-    });
-
-    match image_handler.join() {
-        Ok(res) => match lib_ocr::run_ocr_img(&res, "eng") {
-            Ok(text) => text,
-            Err(e) => lib_ocr::errors::err_to_string(e),
-        },
-        Err(_) => String::from("Some unkown error occured"),
-    }
-}
 
 fn get_target_langs(deepl: &lib_translator::DeepL) -> HashMap<String, MenuItem> {
     let res: Vec<lib_translator::Language> = match deepl.get_supported() {
@@ -266,19 +261,24 @@ fn add_actions(
         glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label => move |_| {
             tbox.set_opacity(0.0);
 
-            // take_sc();
             let start = Instant::now();
             
             let from_lang = source_lang_choice.text();
             let to_lang = target_lang_choice.text();
 
             #[cfg(target_os = "windows")]
-            let text = take_sc_nosave();
+            let text = match take_sc(&ImageMode::NoSave) {
+                Ok(dynamic_image) => match run_ocr_img(&dynamic_image, &from_lang) {
+                    Ok(text) => text, 
+                    Err(err) => lib_ocr::errors::err_to_string(&err)
+                },
+                Err(err) => win_sc::error::err_to_string(&err)
+            };
             
             #[cfg(target_os = "linux")]
             let text = match lib_ocr::run_ocr("./assets/placeholder_de.png", &from_lang) {
                 Ok(text) => text,
-                Err(e) => lib_ocr::errors::err_to_string(e)
+                Err(e) => lib_ocr::errors::err_to_string(&e)
             };
             
             let api_key = api_key_label.text().to_string();
