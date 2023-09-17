@@ -198,6 +198,7 @@ pub fn build_ui(
         &tbox,
         &mainwindow,
         &button,
+        &overlay_text,
     );
 
     menu.append(&source);
@@ -212,7 +213,7 @@ pub fn build_ui(
 
     let provider = gtk::CssProvider::new();
     let style = format!(
-        "label#overlay_text {{ color: white; font-size: 70px; font-weight: bold; }}",
+        "label#overlay_text {{ color: white; font-size: 20px; font-weight: bold; }}",
     );
     provider.load_from_data(style.as_bytes()).unwrap();
 
@@ -282,10 +283,10 @@ fn add_actions(
     tbox: &gtk::Box,
     mainwindow: &gtk::ApplicationWindow,
     button: &Button,
+    overlay_text: &Label,
 ) {
     button.connect_clicked(
-        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label => move |_| {
-            tbox.set_opacity(0.0);
+        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label, @strong overlay_text => move |_| {
 
             let start = Instant::now();
             
@@ -319,8 +320,11 @@ fn add_actions(
             println!("duration : {:?}", duration);
 
             label.set_text(&translated_text);
+            overlay_text.set_text(&translated_text);
             label.set_line_wrap(true);
+            overlay_text.set_line_wrap(true);
             label.set_size_request(500, -1);
+            overlay_text.set_size_request(500, -1);
         }),
     );
 }
