@@ -5,7 +5,7 @@ use rusty_tesseract::{Args, Image};
 pub mod image;
 pub mod text;
 
-// #[cfg(target_os = "windows")]
+#[cfg(target_os = "windows")]
 pub mod win_sc;
 
 pub mod errors;

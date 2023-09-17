@@ -55,6 +55,16 @@ Once you have the cross compilation image built you can just run the cross compi
 
 The packaged application should then appear in your root directory in the folder gtkapp
 
+### Linux
+
+Currently for screen capture there is a placeholder image that is run. So that other functionality can still be worked on while not running into errors. The standard `cargo run` should work, the only dependecies needed are gtk3 and tesseract which you can install by running.
+
+```bash
+sudo apt install libgtk-3-dev tesseract-ocr
+```
+
+Additionally I am planning on migrating the application to gtk4, so keep that in mind in case I forget to update the readme. I will likely just create a docker image for linux as well to make it easier to build.
+
 ### Help
 
 This is a somewhat larger undertaking than what I usually do, so I would greatly appreciate any contributions to any aspect of the app.

@@ -2,9 +2,13 @@ use gtk::ffi::gtk_widget_set_visible;
 use gtk::glib::{Receiver, Sender};
 use gtk::{glib, Application, ApplicationWindow, Button, Entry, Menu, MenuBar, MenuItem};
 use gtk::{prelude::*, Label};
+use gtk::{StyleProvider, StyleProperties, StyleContext};
 use lib_ocr::text::clean_text;
-use lib_ocr::{win_sc::*, run_ocr_img};
+use lib_ocr::run_ocr_img;
+#[cfg(target_os = "windows")]
+use lib_ocr::win_sc::*;
 use lib_translator;
+use gdk::Screen;
 use lib_translator::Language;
 use serde::{Deserialize, Serialize};
 use image::DynamicImage;
@@ -136,6 +140,7 @@ pub fn build_api_dependent(
     mainwindow: &ApplicationWindow,
     textwindow: &ApplicationWindow,
 ) {
+    println!("API key: {}", api_key);
     api_key_label.set_text(&api_key);
     let deepl = &mut lib_translator::DeepL::new(String::from(api_key));
 
@@ -165,6 +170,7 @@ pub fn build_ui(
     mainwindow.set_app_paintable(true);
 
     let label = gtk::Label::new(Some("<translated text>"));
+    let overlay_text = gtk::Label::new(Some("Overlay text"));
     let button = Button::with_label("Translate");
     let source_lang_choice = gtk::Label::new(Some("eng"));
     let target_lang_choice = gtk::Label::new(Some("de"));
@@ -201,6 +207,26 @@ pub fn build_ui(
     button_lang_box.pack_start(&button, true, true, 10);
     button_lang_box.pack_start(&source_lang_choice, false, true, 10);
     button_lang_box.pack_start(&target_lang_choice, false, true, 10);
+
+    overlay_text.set_widget_name("overlay_text");
+
+    let provider = gtk::CssProvider::new();
+    let style = format!(
+        "label#overlay_text {{ color: white; font-size: 70px; font-weight: bold; }}",
+    );
+    provider.load_from_data(style.as_bytes()).unwrap();
+
+    StyleContext::add_provider_for_screen(
+        &gdk::Screen::default().expect("Error initializing gtk css provider."),
+        &provider,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+
+    provider.connect_parsing_error(|_, _, err| {
+        println!("Error: {}", err);
+    });
+
+    tbox.pack_start(&overlay_text, false, false, 10);
 
     vbox.pack_start(&menu, false, false, 10);
     vbox.pack_start(&button_lang_box, false, false, 10);
