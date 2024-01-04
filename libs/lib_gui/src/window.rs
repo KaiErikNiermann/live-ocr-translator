@@ -177,6 +177,7 @@ pub fn build_ui(
     let api_key_entry = Entry::new();
     let api_key_label = gtk::Label::new(Some("Selected API key"));
     let set_api_key_button = Button::with_label("Set API key");
+    let decorated_toggle = Button::with_label("Toggle title bar");
 
     let menu = MenuBar::new();
     let source = MenuItem::with_label("Source");
@@ -199,6 +200,7 @@ pub fn build_ui(
         &mainwindow,
         &button,
         &overlay_text,
+        &decorated_toggle
     );
 
     menu.append(&source);
@@ -232,6 +234,7 @@ pub fn build_ui(
     vbox.pack_start(&menu, false, false, 10);
     vbox.pack_start(&button_lang_box, false, false, 10);
     vbox.pack_start(&label, true, true, 10);
+    vbox.pack_start(&decorated_toggle, true, true, 10);
 
     vbox.set_margin(25);
 
@@ -284,9 +287,17 @@ fn add_actions(
     mainwindow: &gtk::ApplicationWindow,
     button: &Button,
     overlay_text: &Label,
+    decorated_toggle: &Button
 ) {
+    decorated_toggle.connect_clicked(
+        glib::clone!(@strong mainwindow, => move |_| {
+            let toggle = mainwindow.is_decorated();
+            mainwindow.set_decorated(!toggle);
+        })
+    );
+
     button.connect_clicked(
-        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label, @strong overlay_text => move |_| {
+        glib::clone!(@weak label, @weak tbox, @weak mainwindow, @weak source_lang_choice, @strong target_lang_choice, @strong api_key_label, @strong overlay_text, => move |_| {
 
             let start = Instant::now();
             
